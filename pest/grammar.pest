@@ -2,71 +2,76 @@ WHITESPACE = _{ " " | "\t" | NEWLINE }
 
 id = @{ ('a'..'z' | "ä" | "ì" | "'")+ }
 
-single_digit_number = _{
-    "kew"               // 0
-    | "'aw"             // 1
-    | "mune"            // 2
-    | "pxey"            // 3
-    | "tsìng"           // 4
-    | "mrr"             // 5
-    | "pukap"           // 6
-    | "kinä"            // 7
-}
+// single_digit_number = _{
+//     "kew"               // 0
+//     | "'aw"             // 1
+//     | "mune"            // 2
+//     | "pxey"            // 3
+//     | "tsìng"           // 4
+//     | "mrr"             // 5
+//     | "pukap"           // 6
+//     | "kinä"            // 7
+// }
+// 
+// // +1 case is handled in compound_number
+// compound_number_unit = _{
+//     "mun"               // +2
+//     | "pey"             // +3
+//     | "sìng"            // +4
+//     | "mrr"             // +5
+//     | "fu"              // +6
+//     | "hin"             // +7
+// }
+// 
+// // 8 case is handled in compound_number
+// compound_number_prefix = _{
+//     "me"                // 16
+//     | "pxe"             // 24
+//     | "tsì"             // 32
+//     | "mrr"             // 40
+//     | "pu"              // 48
+//     | "ki"              // 56
+// }
+// 
+// //TODO: Handle `\w+m ~ me/mun/mrr` edge case
+// //TODO: Handle empty number edge case
+// compound_number = ${
+//     (compound_number_prefix? ~ "zazam")?
+//     ~ (compound_number_prefix? ~ "vozam")?
+//     ~ (compound_number_prefix? ~ "zam")?
+//     ~ (
+//         compound_number_prefix?
+//         ~ (("volaw" | "vol")
+//             | ("vo" ~ compound_number_unit)
+//         )
+//     )?
+// }
+// 
+// number = @{
+//     single_digit_number
+//     | compound_number
+// }
 
-// +1 case is handled in compound_number
-compound_number_unit = _{
-    "mun"               // +2
-    | "pey"             // +3
-    | "sìng"            // +4
-    | "mrr"             // +5
-    | "fu"              // +6
-    | "hin"             // +7
-}
+number = { ASCII_OCT_DIGIT+ }
 
-// 8 case is handled in compound_number
-compound_number_prefix = _{
-    "me"                // 16
-    | "pxe"             // 24
-    | "tsì"             // 32
-    | "mrr"             // 40
-    | "pu"              // 48
-    | "ki"              // 56
-}
+inner = @{ (!(WHITESPACE ~ "sìk") ~ ANY)* }
+string = ${ ("san" ~ WHITESPACE) ~ inner ~ (WHITESPACE ~ "sìk") }
 
-//TODO: Handle `\w+m ~ me/mun/mrr` edge case
-//TODO: Handle empty number edge case
-compound_number = ${
-    (compound_number_prefix? ~ "zazam")?
-    ~ (compound_number_prefix? ~ "vozam")?
-    ~ (compound_number_prefix? ~ "zam")?
-    ~ (
-        compound_number_prefix?
-        ~ (("volaw" | "vol")
-            | ("vo" ~ compound_number_unit)
-        )
-    )?
-}
-
-number = @{
-    single_digit_number
-    | compound_number
+var_dec = {
+    "ngop" ~ singular_var_dec
 }
 
 singular_var_dec = {
-    "'u" ~ id ~ "alu" ~ number
+    "'u" ~ id ~ "alu" ~ exp
 }
 dual_var_dec = {
-    "meu" ~ id ~ "sì" ~ id ~ "alu" ~ number ~ "sì" ~ number
+    "meu" ~ id ~ "sì" ~ id ~ "alu" ~ exp ~ "sì" ~ exp
 }
 trial_var_dec = {
-    "pxeu" ~ id ~ ("sì" ~ id){2} ~ "alu" ~ number ~ ("sì" ~ number){2}
+    "pxeu" ~ id ~ ("sì" ~ id){2} ~ "alu" ~ exp ~ ("sì" ~ exp){2}
 }
 plural_var_dec = {
-    "ayu" ~ id ~ ("sì" ~ id){3,} ~ "alu" ~ number ~ ("sì" ~ number){3,}
-}
-
-var_dec = {
-    "ngop" ~ (singular_var_dec | dual_var_dec | trial_var_dec | plural_var_dec)
+    "ayu" ~ id ~ ("sì" ~ id){3,} ~ "alu" ~ exp ~ ("sì" ~ exp){3,}
 }
 
 statement = {
@@ -81,8 +86,10 @@ comparison = {
     id ~ "sì" ~ id ~ "livu" ~ comparison_operator
 }
 
-exp = {
+exp = _{
     comparison
+    | number
+    | string
 }
 
 program = { SOI ~ (statement | exp)* ~ EOI }
