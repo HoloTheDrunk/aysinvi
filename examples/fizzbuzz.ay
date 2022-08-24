@@ -1,0 +1,15 @@
+ngop lì'ukìng fizzbuzz fa n alu
+    ngop 'u i alu 1 ulte
+    leyn vaykrr i sì n livu teng
+        ngop 'u pxey alu 'ì'awnyu fa i sì 3 ulte
+        ngop 'u mrr alu 'ì'awnyu fa i sì 5 ulte
+        txo pxey sì 0 livu teng, tsakrr 
+            txo mrr sì 0 livu teng, tsakrr 
+                wìntxu fa san FizzBuzz sìk,
+            txokefyaw
+                wìntxu fa san Fizz sìk,
+        txokefyaw
+            txo mrr sì 0 livu teng, tsakrr
+                wìntxu fa san Buzz sìk
+        txew
+    ftang txew.
