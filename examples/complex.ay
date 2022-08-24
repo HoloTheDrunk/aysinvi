@@ -9,6 +9,7 @@ ngop lì'ukìng foo fa arguno sì argdos alu
     wìntxu fa arguno ulte
     wìntxu fa argdos txew...
 
+'' Recurses from n to 0, printing along the way
 ngop lì'ukìng rec alu 
     ngop lì'ukìng inner fa n alu
         txo n sì 0 ke livu teng, tsakrr
