@@ -14,6 +14,7 @@ ngop lì'ukìng rec alu
     ngop lì'ukìng inner fa n alu
         txo n sì 0 ke livu teng, tsakrr
             wìntxu fa n ulte
+            '' Call inner(n-1)
             ngop 'u n alu kämunge fa n sì 1 ulte
             inner fa n txew
     ulte inner fa 5 txew.

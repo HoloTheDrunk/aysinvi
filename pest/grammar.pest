@@ -63,7 +63,7 @@ block = {
 }
 
 block_body = {
-	((statement | exp_block) ~ (("ulte" ~ (statement | exp_block))* ~ !(".") ~ "txew")?)?
+	(((statement | exp_block) ~ (("ulte" ~ (statement | exp_block)) | comment)* ~ !(".") ~ "txew")?)?
 }
 
 call = {
