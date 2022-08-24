@@ -2,13 +2,28 @@ WHITESPACE = _{ " " | "\t" | NEWLINE }
 
 id = @{ ('a'..'z' | "ä" | "ì" | "'")+ }
 
-number = { ASCII_OCT_DIGIT+ }
+number = @{ ASCII_OCT_DIGIT+ }
 
 inner = @{ (!(WHITESPACE ~ "sìk") ~ ANY)* }
 string = ${ ("san" ~ WHITESPACE) ~ inner ~ (WHITESPACE ~ "sìk") }
 
+literal = { number | string }
+atom = { literal | id }
+
+math = {
+	atom ~ ("melo" | "pelo")
+}
+
+func_dec = {
+	"lì'ukìng" ~ id ~ ("fa" ~ id ~ ("sì" ~ id)*)? ~ "alu" ~ block_body
+}
+
 var_dec = {
-    "ngop" ~ (singular_var_dec | dual_var_dec | trial_var_dec | plural_var_dec)
+    singular_var_dec | dual_var_dec | trial_var_dec | plural_var_dec
+}
+
+dec = {
+	"ngop" ~ (var_dec | func_dec)
 }
 
 singular_var_dec = {
@@ -24,22 +39,59 @@ plural_var_dec = {
     "ayu" ~ id ~ ("sì" ~ id){3,} ~ "alu" ~ exp ~ ("sì" ~ exp){3,}
 }
 
-statement = {
-    var_dec ~ "."
-}
-
 comparison_operator = {
     "teng"
 }
 
+negation = { "ke" }
+
 comparison = {
-    id ~ "sì" ~ id ~ "livu" ~ comparison_operator
+    atom ~ ("sì" ~ atom)+ ~ negation? ~ "livu" ~ comparison_operator
 }
 
-exp = _{
-    comparison
-    | number
-    | string
+if_exp = {
+    "txo" ~ exp_block ~ "," ~ "tsakrr" ~ exp_block ~ ("," ~ "txokefyaw" ~ exp_block)?
 }
 
-program = { SOI ~ (statement | exp)* ~ EOI }
+loop_exp = {
+    "leyn" ~ ("vaykrr" ~ exp)? ~ block_body ~ "ftang"
+}
+
+block = {
+    if_exp
+    | loop_exp
+}
+
+block_body = {
+	((statement | exp_block) ~ (("ulte" ~ (statement | exp_block))* ~ !(".") ~ "txew")?)?
+}
+
+call = {
+	id ~ (("fa" ~ (math|atom) ~ ("sì" ~ (math|atom))*) | "sì")
+}
+
+exp = {
+    math
+    | block
+    | comparison
+    | literal
+    | call
+}
+
+exp_block = {
+    exp*
+}
+
+statement = {
+    dec
+}
+
+comment = @{ 
+	"''" ~ WHITESPACE* ~ (!NEWLINE ~ ANY)* ~ WHITESPACE* ~ NEWLINE?
+}
+
+body = {
+	(((statement | exp_block) ~ ".") | comment)*
+}
+
+program = { SOI ~ body ~ EOI }
