@@ -1,14 +1,14 @@
 #![allow(unused)]
 
 mod error;
-mod ast;
+mod parsing;
 
 extern crate pest;
 #[macro_use]
 extern crate pest_derive;
 
 use crate::{
-    ast::*,
+    parsing::*,
     error::*
 };
 
