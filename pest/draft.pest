@@ -1,0 +1,100 @@
+WHITESPACE = _{ " " | "\t" | NEWLINE }
+
+navchar = { 'a'..'z' | "ä" | "ì" | "'" }
+ident = @{ navchar ~ (navchar | "_")+ }
+
+number = @{ ASCII_OCT_DIGIT+ }
+
+inner = @{ (!(WHITESPACE ~ "sìk") ~ ANY)* }
+string = ${ ("san" ~ WHITESPACE) ~ inner ~ (WHITESPACE ~ "sìk") }
+
+literal = { number | string }
+atom = { literal | ident }
+
+math = {
+	atom ~ ("melo" | "pelo")
+}
+
+func_dec = _{
+	"lì'ukìng" ~ ident ~ func_dec_args ~ "alu" ~ block_body
+}
+
+func_dec_args = { ("fa" ~ ident ~ ("sì" ~ ident)*)? }
+
+var_dec = {
+    singular_var_dec | dual_var_dec | trial_var_dec | plural_var_dec
+}
+
+dec = {
+	"ngop" ~ (var_dec | func_dec)
+}
+
+singular_var_dec = {
+    "'u" ~ ident ~ "alu" ~ exp
+}
+dual_var_dec = {
+    "meu" ~ ident ~ "sì" ~ ident ~ "alu" ~ exp ~ "sì" ~ exp
+}
+trial_var_dec = {
+    "pxeu" ~ ident ~ ("sì" ~ ident){2} ~ "alu" ~ exp ~ ("sì" ~ exp){2}
+}
+plural_var_dec = {
+    "ayu" ~ ident ~ ("sì" ~ ident){3,} ~ "alu" ~ exp ~ ("sì" ~ exp){3,}
+}
+
+comparison_operator = {
+    "teng"
+}
+
+negation = { "ke" }
+
+comparison = {
+    atom ~ ("sì" ~ atom)+ ~ negation? ~ "livu" ~ comparison_operator
+}
+
+if_exp = {
+    "txo" ~ exp_block ~ "," ~ "tsakrr" ~ exp_block ~ ("," ~ "txokefyaw" ~ exp_block)?
+}
+
+loop_exp = {
+    "leyn" ~ ("vaykrr" ~ exp)? ~ block_body ~ "ftang"
+}
+
+block = {
+    if_exp
+    | loop_exp
+}
+
+block_body = {
+	(((statement | exp_block) ~ (("ulte" ~ (statement | exp_block)) | comment)* ~ !(".") ~ "txew")?)?
+}
+
+call = {
+	ident ~ (("fa" ~ (math|atom) ~ ("sì" ~ (math|atom))*) | "sì")
+}
+
+exp = {
+    math
+    | block
+    | comparison
+    | literal
+    | call
+}
+
+exp_block = {
+    exp*
+}
+
+statement = {
+    dec
+}
+
+comment = @{ 
+	"''" ~ WHITESPACE* ~ (!NEWLINE ~ ANY)* ~ WHITESPACE* ~ NEWLINE?
+}
+
+body = {
+	(((statement | exp_block) ~ ".") | comment)*
+}
+
+program = { SOI ~ body ~ EOI }

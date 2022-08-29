@@ -1,97 +1,108 @@
 WHITESPACE = _{ " " | "\t" | NEWLINE }
 
-id = @{ ('a'..'z' | "ä" | "ì" | "'")+ }
+// Identifiers
+navchar = { 'a'..'z' | "ä" | "ì" | "'" }
+ident = @{ navchar ~ (navchar | "_")+ }
 
+// Literals
 number = @{ ASCII_OCT_DIGIT+ }
 
 inner = @{ (!(WHITESPACE ~ "sìk") ~ ANY)* }
 string = ${ ("san" ~ WHITESPACE) ~ inner ~ (WHITESPACE ~ "sìk") }
 
 literal = { number | string }
-atom = { literal | id }
+atom = { literal | ident }
 
-math = {
-	atom ~ ("melo" | "pelo")
+qmath = { atom ~ ("melo" | "pelo") }
+
+// Declarations
+dec = {
+	"ngop" ~ (var_dec | fun_dec)
 }
 
-func_dec = {
-	"lì'ukìng" ~ id ~ ("fa" ~ id ~ ("sì" ~ id)*)? ~ "alu" ~ block_body
+fun_dec = _{
+	"lì'ukìng" ~ ident ~ fun_dec_args ~ "alu" ~ block_body
 }
+
+fun_dec_args = { ("fa" ~ ident ~ ("sì" ~ ident)*)? }
 
 var_dec = {
     singular_var_dec | dual_var_dec | trial_var_dec | plural_var_dec
 }
 
-dec = {
-	"ngop" ~ (var_dec | func_dec)
-}
-
 singular_var_dec = {
-    "'u" ~ id ~ "alu" ~ exp
+    "'u" ~ ident ~ "alu" ~ expr
 }
+
 dual_var_dec = {
-    "meu" ~ id ~ "sì" ~ id ~ "alu" ~ exp ~ "sì" ~ exp
+    "meu" ~ ident ~ "sì" ~ ident ~ "alu" ~ expr ~ "sì" ~ expr
 }
+
 trial_var_dec = {
-    "pxeu" ~ id ~ ("sì" ~ id){2} ~ "alu" ~ exp ~ ("sì" ~ exp){2}
+    "pxeu" ~ ident ~ ("sì" ~ ident){2} ~ "alu" ~ expr ~ ("sì" ~ expr){2}
 }
+
 plural_var_dec = {
-    "ayu" ~ id ~ ("sì" ~ id){3,} ~ "alu" ~ exp ~ ("sì" ~ exp){3,}
+    "ayu" ~ ident ~ ("sì" ~ ident){3,} ~ "alu" ~ expr ~ ("sì" ~ expr){3,}
 }
 
-comparison_operator = {
-    "teng"
+// Control flow
+control_block = {
+    if_expr
+    | loop_expr
 }
 
-negation = { "ke" }
+if_expr = {
+    "txo" ~ expr_block ~ "," ~ "tsakrr" ~ expr_block ~ ("," ~ "txokefyaw" ~ expr_block)?
+}
+
+loop_expr = {
+    "leyn" ~ ("vaykrr" ~ expr)? ~ block_body ~ "ftang"
+}
 
 comparison = {
     atom ~ ("sì" ~ atom)+ ~ negation? ~ "livu" ~ comparison_operator
 }
 
-if_exp = {
-    "txo" ~ exp_block ~ "," ~ "tsakrr" ~ exp_block ~ ("," ~ "txokefyaw" ~ exp_block)?
-}
+negation = { "ke" }
 
-loop_exp = {
-    "leyn" ~ ("vaykrr" ~ exp)? ~ block_body ~ "ftang"
-}
+comparison_operator = { "teng" }
 
-block = {
-    if_exp
-    | loop_exp
-}
-
-block_body = {
-	(((statement | exp_block) ~ (("ulte" ~ (statement | exp_block)) | comment)* ~ !(".") ~ "txew")?)?
-}
-
+// Function call
 call = {
-	id ~ (("fa" ~ (math|atom) ~ ("sì" ~ (math|atom))*) | "sì")
+	ident ~ (("fa" ~ (qmath|atom) ~ ("sì" ~ (qmath|atom))*) | "sì")
 }
 
-exp = {
-    math
-    | block
+// Expression
+expr = {
+    qmath
+    | control_block
     | comparison
     | literal
     | call
 }
 
-exp_block = {
-    exp*
+expr_block = {
+    expr*
 }
 
+// Statement
 statement = {
     dec
+}
+
+// Misc
+block_body = {
+	(((statement | expr_block) ~ (("ulte" ~ (statement | expr_block)) | comment)* ~ !(".") ~ "txew")?)?
+}
+
+body = _{
+	(((statement | expr_block) ~ ".") | comment)*
 }
 
 comment = @{ 
 	"''" ~ WHITESPACE* ~ (!NEWLINE ~ ANY)* ~ WHITESPACE* ~ NEWLINE?
 }
 
-body = {
-	(((statement | exp_block) ~ ".") | comment)*
-}
-
-program = { SOI ~ body ~ EOI }
+// Start
+program = _{ SOI ~ body ~ EOI }
