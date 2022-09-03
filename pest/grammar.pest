@@ -1,108 +1,46 @@
 WHITESPACE = _{ " " | "\t" | NEWLINE }
+COMMENT = _{ "''" ~ (!"''" ~ ANY)* ~ "''" }
 
-// Identifiers
-navchar = { 'a'..'z' | "ä" | "ì" | "'" }
-ident = @{ navchar ~ (navchar | "_")+ }
-
-// Literals
 number = @{ ASCII_OCT_DIGIT+ }
+ident = @{ ('a'..'z' | "ì" | "ä" | "\'")+ }
+fun_ident = @{ ident ~ ("." ~ ident)? }
 
-inner = @{ (!(WHITESPACE ~ "sìk") ~ ANY)* }
-string = ${ ("san" ~ WHITESPACE) ~ inner ~ (WHITESPACE ~ "sìk") }
-
-literal = { number | string }
-atom = { literal | ident }
-
-qmath = { atom ~ ("melo" | "pelo") }
-
-// Declarations
-dec = {
-	"ngop" ~ (var_dec | fun_dec)
+expr = {
+	"ke"? ~ (
+        fun_call
+        | number
+        | ident
+    )
 }
 
-fun_dec = _{
-	"lì'ukìng" ~ ident ~ fun_dec_args ~ "alu" ~ block_body
+fun_call = {
+	ident ~ (("fa" ~ expr ~ ("sì" ~ expr)*) | "si")
 }
 
-fun_dec_args = { ("fa" ~ ident ~ ("sì" ~ ident)*)? }
+fun_dec = {
+    "lì'ukìng" ~ fun_ident ~ ("fa" ~ ident ~ ("sì" ~ ident)*)? ~ ("alu" ~ block_body ~ ( &"." | "txew"))?
+}
 
 var_dec = {
-    singular_var_dec | dual_var_dec | trial_var_dec | plural_var_dec
+	"'u" ~ ident ~ "alu" ~ expr
 }
 
-singular_var_dec = {
-    "'u" ~ ident ~ "alu" ~ expr
+dec = _{
+	"ngop" ~ (fun_dec | var_dec)
 }
 
-dual_var_dec = {
-    "meu" ~ ident ~ "sì" ~ ident ~ "alu" ~ expr ~ "sì" ~ expr
+if_block = {
+	"txo" ~ expr ~ "," ~ "tsakrr" ~ block_body ~ (("," ~ "txokefyaw" ~ block_body) | ( &"." | "txew"))
 }
 
-trial_var_dec = {
-    "pxeu" ~ ident ~ ("sì" ~ ident){2} ~ "alu" ~ expr ~ ("sì" ~ expr){2}
+loop_block = {
+	"leyn" ~ ("vaykrr" ~ expr)? ~ "kem si" ~ block_body ~ "ftang"
 }
 
-plural_var_dec = {
-    "ayu" ~ ident ~ ("sì" ~ ident){3,} ~ "alu" ~ expr ~ ("sì" ~ expr){3,}
-}
-
-// Control flow
-control_block = {
-    if_expr
-    | loop_expr
-}
-
-if_expr = {
-    "txo" ~ expr_block ~ "," ~ "tsakrr" ~ expr_block ~ ("," ~ "txokefyaw" ~ expr_block)?
-}
-
-loop_expr = {
-    "leyn" ~ ("vaykrr" ~ expr)? ~ block_body ~ "ftang"
-}
-
-comparison = {
-    atom ~ ("sì" ~ atom)+ ~ negation? ~ "livu" ~ comparison_operator
-}
-
-negation = { "ke" }
-
-comparison_operator = { "teng" }
-
-// Function call
-call = {
-	ident ~ (("fa" ~ (qmath|atom) ~ ("sì" ~ (qmath|atom))*) | "sì")
-}
-
-// Expression
-expr = {
-    qmath
-    | control_block
-    | comparison
-    | literal
-    | call
-}
-
-expr_block = {
-    expr*
-}
-
-// Statement
 statement = {
-    dec
+	dec | if_block | loop_block | expr
 }
 
-// Misc
-block_body = {
-	(((statement | expr_block) ~ (("ulte" ~ (statement | expr_block)) | comment)* ~ !(".") ~ "txew")?)?
-}
+block_body = { statement ~ ("ulte" ~ statement)*}
 
-body = _{
-	(((statement | expr_block) ~ ".") | comment)*
-}
-
-comment = @{ 
-	"''" ~ WHITESPACE* ~ (!NEWLINE ~ ANY)* ~ WHITESPACE* ~ NEWLINE?
-}
-
-// Start
-program = _{ SOI ~ body ~ EOI }
+program = _{ SOI ~ (statement ~ ".")* ~ EOI }

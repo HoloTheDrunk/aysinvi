@@ -1,0 +1,34 @@
+''top-level call''
+wìntxu si.
+
+''top-level variable declaration''
+ngop 'u a alu 2.
+
+''empty simple function''
+ngop lì'ukìng test.
+
+''lazy function''
+ngop lì'ukìng f.unction alu 0.
+
+''lazy function with multiple statements''
+ngop lì'ukìng t.aron alu 
+    wìntxu fa a ulte
+    wìntxu fa sung fa 1 sì 2.
+
+''function inside function''
+ngop lì'ukìng outer alu
+    ngop lì'ukìng inner alu
+        ngop 'u a alu 2 ulte
+        wìntxu fa sung fa a sì 3 
+    txew.
+
+''if construct''
+txo teng fa 1 sì 2, tsakrr
+    wìntxu fa 1,
+    txokefyaw wìntxu fa 2.
+
+''loop construct''
+ngop lì'ukìng loop fa a sì b alu
+    leyn vaykrr ke teng fa a sì b kem si
+        wìntxu fa a
+    ftang.
