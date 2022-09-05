@@ -1,19 +1,22 @@
 WHITESPACE = _{ " " | "\t" | NEWLINE }
-COMMENT = _{ "''" ~ (!"''" ~ ANY)* ~ "''" }
+COMMENT = _{ "''" ~ (!(NEWLINE | "''") ~ ANY)* ~ (NEWLINE | "''") }
 
-number = @{ ASCII_OCT_DIGIT+ }
+string = { (!(WHITESPACE ~ "sìk") ~ ANY)* }
+string_container = _{ "san" ~ WHITESPACE ~ string ~ WHITESPACE ~ "sìk" }
+number = @{ ASCII_OCT_DIGIT+ ~ (WHITESPACE ~ ("melo" | "pxelo")) }
 ident = @{ ('a'..'z' | "ì" | "ä" | "\'")+ }
 fun_ident = @{ ident ~ ("." ~ ident)? }
 
-expr = {
-	"ke"? ~ (
+expr = ${
+	("ke" ~ WHITESPACE)? ~ (
         fun_call
         | number
+        | string_container
         | ident
     )
 }
 
-fun_call = {
+fun_call = !{
 	ident ~ (("fa" ~ expr ~ ("sì" ~ expr)*) | "si")
 }
 
