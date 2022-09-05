@@ -11,6 +11,7 @@ pub enum Stage {
     AstBuilding,
     Typing,
     Compiling,
+    Unknown,
 }
 
 #[derive(Debug)]
@@ -20,7 +21,25 @@ pub struct Trace {
 
 impl From<(Stage, Error<Rule>)> for Trace {
     fn from((stage, err): (Stage, Error<Rule>)) -> Self {
-        Trace { stack: vec![(stage, err)] }
+        Trace {
+            stack: vec![(stage, err)],
+        }
+    }
+}
+
+impl From<Error<Rule>> for Trace {
+    fn from(err: Error<Rule>) -> Self {
+        Trace {
+            stack: vec![(Stage::Unknown, err)],
+        }
+    }
+}
+
+impl Trace {
+    pub fn new(stage: Stage, err: Error<Rule>) -> Self {
+        Trace {
+            stack: vec![(stage, err)],
+        }
     }
 }
 
@@ -33,7 +52,7 @@ impl std::fmt::Display for Trace {
                 .iter()
                 .map(|(stage, err)| {
                     format!(
-                       "--> {}\n{}\n |{}\n = {}\n",
+                        "--> {}\n{}\n |{}\n = {}\n",
                         // Error coordinates
                         match err.line_col {
                             LineColLocation::Pos((y, x)) => format!("{y}:{x}"),
