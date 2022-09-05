@@ -18,16 +18,27 @@ pub enum Statement {
         body: Vec<Statement>,
     },
     VarDec {
-        names: Vec<String>,
-        values: Vec<Expr>,
+        names: String,
+        values: Expr,
     },
     Expr(Expr),
+    If {
+        cond: Expr,
+        then: Vec<Statement>,
+        otherwise: Vec<Statement>,
+    },
+    Loop {
+        cond: Option<Expr>,
+        body: Vec<Statement>,
+    },
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Expr {
-    Number(i32),
-    Str(String),
+    FunCall { name: String, args: Vec<Expr> },
+    Number(i64),
+    String(String),
+    Ident(String),
 }
 
 /// Pushes new error onto stacktrace or returns pred(pair).
@@ -51,52 +62,110 @@ where
     })
 }
 
-/// Builds [Statement] from either statement or expr rules
-fn dispatch(pair: Pair<Rule>) -> Result<Statement, Trace> {
-    match pair.as_rule() {
-        Rule::fun_dec | Rule::var_dec => build_ast_from_statement(pair),
-        Rule::ident | Rule::string | Rule::number | Rule::call => {
-            Ok(Statement::Expr(build_ast_from_expr(pair)?))
-        }
-        unknown => Err((
-            Stage::Compiling,
-            Error::new_from_span(
-                ErrorVariant::CustomError {
-                    message: format!("Unknown rule {:?}", unknown),
-                },
-                pair.as_span(),
-            ),
-        )
-            .into()),
-    }
-}
-
 macro_rules! fields {
-    ($pair:ident |> $last:ident) => {
-        let $last = $pair.next().unwrap();
-    };
-
-    ($pair:ident |> $first:ident $(, $tail:ident)*) => {
-        let $first = $pair.next().unwrap();
-        fields!($pair |> $($tail),*);
+    ($pair:ident |> $($field:ident),*) => {
+        $(
+            let $field = $pair.next().unwrap();
+        )+
     };
 }
 
-fn build_ast_from_expr(pair: Pair<Rule>) -> Result<Expr, Trace> {
-    Ok(Expr::Number(2))
+fn build_ast_from_expr(pair: Pair<Rule>, negated: bool) -> Result<Expr, Trace> {
+    match pair.as_rule() {
+        Rule::number => {
+            let span = pair.as_span();
+            let mut elems = span.as_str().split_whitespace();
+            let number = elems.next().unwrap();
+            let mult: i64 = match elems.next() {
+                Some("melo") => 2,
+                Some("pxelo") => 3,
+                None => 1,
+                _ => unimplemented!("We shouldn't be here"),
+            };
+
+            let result: i64 = i64::from_str_radix(number, 8).map_err(|_| {
+                Trace::new(
+                    Stage::Parsing,
+                    Error::new_from_span(
+                        ErrorVariant::ParsingError {
+                            positives: vec![],
+                            negatives: vec![],
+                        },
+                        span,
+                    ),
+                )
+            })? * mult;
+
+            Ok(Expr::Number(result))
+        }
+        Rule::string => Ok(Expr::String(pair.as_span().as_str().to_owned())),
+        rule => unimplemented!("Missing statement-generating rule {:?}", rule),
+    }
 }
 
 fn build_ast_from_statement(pair: Pair<Rule>) -> Result<Statement, Trace> {
-    Ok(Statement::Expr(Expr::Number(2)))
+    match pair.as_rule() {
+        Rule::expr => {
+            let negated = {
+                let chars = pair.as_span().as_str().chars().take(3).collect::<String>();
+                chars.len() == 3 && chars == "ke "
+            };
+
+            Ok(Statement::Expr(build_ast_from_expr(
+                pair.into_inner().next().unwrap(),
+                negated,
+            )?))
+        }
+        rule => unimplemented!("Missing statement-generating rule {:?}", rule),
+    }
 }
 
-pub fn parse(source: &str) -> Result<Vec<Statement>, Error<Rule>> {
+pub fn parse(source: &str) -> Result<Vec<Statement>, Trace> {
     let mut ast = vec![];
 
     let pairs = AyParser::parse(Rule::program, source)?;
+
+    for pair in pairs.clone() {
+        recursive_print(Some(&pair), 0);
+    }
+
     for pair in pairs {
-        dbg!(pair);
+        match pair.as_rule() {
+            Rule::statement => ast.push(build_ast_from_statement(pair)?),
+            Rule::EOI => {}
+            unknown_rule => Err(Error::new_from_span(
+                ErrorVariant::CustomError {
+                    message: format!("Unknown rule: {:?}", unknown_rule),
+                },
+                pair.as_span(),
+            ))?,
+        }
     }
 
     Ok(ast)
+}
+
+pub fn recursive_print(cur: Option<&Pair<Rule>>, depth: u8) {
+    if let Some(node) = cur {
+        let rule = node.as_rule();
+
+        let indent = (0..depth)
+            .map(|_| "\x1b[32m|   \x1b[0m")
+            .collect::<String>();
+
+        println!(
+            "{}\x1b[1;33m{:?}\x1b[0m:'{}'",
+            indent,
+            rule,
+            node.as_span()
+                .as_str()
+                .lines()
+                .map(|line| line.trim())
+                .collect::<String>()
+        );
+
+        for pair in node.clone().into_inner() {
+            recursive_print(Some(&pair), depth + 1);
+        }
+    }
 }
