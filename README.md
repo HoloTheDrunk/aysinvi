@@ -42,3 +42,6 @@ The grammar is not fixed yet but some of the main goals of this project are:
  - [ ] Interpreter
  - [ ] Compiler
  - [ ] REPL
+
+## Addendum
+I have been informed that I am forced to add that since this is made with Rust, it will obviously be 🚀 blazingly fast 🚀.
