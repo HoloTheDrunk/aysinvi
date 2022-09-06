@@ -99,6 +99,7 @@ fn build_ast_from_expr(pair: Pair<Rule>, negated: bool) -> Result<Expr, Trace> {
             Ok(Expr::Number(result))
         }
         Rule::string => Ok(Expr::String(pair.as_span().as_str().to_owned())),
+        Rule::ident => Ok(Expr::Ident(pair.as_span().as_str().to_owned())),
         rule => unimplemented!("Missing statement-generating rule {:?}", rule),
     }
 }
