@@ -107,15 +107,70 @@ fn build_ast_from_expr(pair: Pair<Rule>, negated: bool) -> Result<Expr, Trace> {
 fn build_ast_from_statement(pair: Pair<Rule>) -> Result<Statement, Trace> {
     match pair.as_rule() {
         Rule::expr => {
+            // TODO: change grammar to have negation token
             let negated = {
-                let chars = pair.as_span().as_str().chars().take(3).collect::<String>();
-                chars.len() == 3 && chars == "ke "
+                let mut res = false;
+
+                for chunk in pair
+                    .as_span()
+                    .as_str()
+                    .chars()
+                    .collect::<Vec<char>>()
+                    .chunks_exact(3)
+                {
+                    match chunk {
+                        ['k', 'e', ' '] => res = !res,
+                        _ => break,
+                    }
+                }
+
+                res
             };
 
             Ok(Statement::Expr(build_ast_from_expr(
                 pair.into_inner().next().unwrap(),
                 negated,
             )?))
+        }
+        Rule::var_dec => {
+            let span = pair.as_span();
+
+            let mut idents = Vec::<Pair<Rule>>::new();
+            let mut values = Vec::<Pair<Rule>>::new();
+
+            pair.into_inner().for_each(|child| {
+                if child.as_rule() == Rule::ident {
+                    idents.push(child);
+                } else {
+                    values.push(child);
+                }
+            });
+
+            if idents.len() != values.len() {
+                return Err(Trace::new(
+                    Stage::Parsing,
+                    Error::new_from_span(
+                        ErrorVariant::ParsingError {
+                            positives: vec![Rule::var_dec],
+                            negatives: vec![],
+                        },
+                        span,
+                    ),
+                ));
+            }
+
+            Ok(Statement::VarDec {
+                names: idents
+                    .iter()
+                    .map(|ident| ident.as_span().as_str().to_owned())
+                    .collect(),
+
+                // TODO: handle negation (see comment in Rule::expr handling)
+                values: values
+                    .iter()
+                    .map(|value| build_ast_from_expr(value.clone(), false))
+                    .collect::<Result<Vec<Expr>, Trace>>()?,
+            })
         }
         rule => unimplemented!("Missing statement-generating rule {:?}", rule),
     }
