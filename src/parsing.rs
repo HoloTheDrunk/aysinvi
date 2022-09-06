@@ -18,8 +18,8 @@ pub enum Statement {
         body: Vec<Statement>,
     },
     VarDec {
-        names: String,
-        values: Expr,
+        names: Vec<String>,
+        values: Vec<Expr>,
     },
     Expr(Expr),
     If {

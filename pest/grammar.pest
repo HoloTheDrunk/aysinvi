@@ -3,7 +3,7 @@ COMMENT = _{ "''" ~ (!(NEWLINE | "''") ~ ANY)* ~ (NEWLINE | "''") }
 
 string = { (!(WHITESPACE ~ "sìk") ~ ANY)* }
 string_container = _{ "san" ~ WHITESPACE ~ string ~ WHITESPACE ~ "sìk" }
-number = @{ ASCII_OCT_DIGIT+ ~ (WHITESPACE ~ ("melo" | "pxelo")) }
+number = @{ ASCII_OCT_DIGIT+ ~ (WHITESPACE ~ ("melo" | "pxelo"))? }
 ident = @{ ('a'..'z' | "ì" | "ä" | "\'")+ }
 fun_ident = @{ ident ~ ("." ~ ident)? }
 
@@ -25,7 +25,7 @@ fun_dec = {
 }
 
 var_dec = {
-	"'u" ~ ident ~ "alu" ~ expr
+	("'u" | "meu" | "pxeu" | "ayu") ~ ident ~ ("sì" ~ ident)* ~ "alu" ~ expr ~ ("sì" ~ expr)*
 }
 
 dec = _{
