@@ -39,6 +39,7 @@ pub enum Expr {
     Number(i64),
     String(String),
     Ident(String),
+    Negated(Box<Expr>),
 }
 
 /// Pushes new error onto stacktrace or returns pred(pair).
@@ -70,8 +71,17 @@ macro_rules! fields {
     };
 }
 
-fn build_ast_from_expr(pair: Pair<Rule>, negated: bool) -> Result<Expr, Trace> {
+fn build_ast_from_expr(pair: Pair<Rule>) -> Result<Expr, Trace> {
     match pair.as_rule() {
+        Rule::negation => {
+            let mut children = pair.into_inner();
+            fields!(children |> expr);
+
+            // Desired expr is wrapped in a Rule::expr
+            Ok(Expr::Negated(Box::new(build_ast_from_expr(
+                expr.into_inner().next().unwrap(),
+            )?)))
+        }
         Rule::number => {
             let span = pair.as_span();
             let mut elems = span.as_str().split_whitespace();
@@ -83,7 +93,7 @@ fn build_ast_from_expr(pair: Pair<Rule>, negated: bool) -> Result<Expr, Trace> {
                 _ => unimplemented!("We shouldn't be here"),
             };
 
-            let result: i64 = i64::from_str_radix(number, 8).map_err(|_| {
+            let result = i64::from_str_radix(number, 8).map_err(|_| {
                 Trace::new(
                     Stage::Parsing,
                     Error::new_from_span(
@@ -100,38 +110,23 @@ fn build_ast_from_expr(pair: Pair<Rule>, negated: bool) -> Result<Expr, Trace> {
         }
         Rule::string => Ok(Expr::String(pair.as_span().as_str().to_owned())),
         Rule::ident => Ok(Expr::Ident(pair.as_span().as_str().to_owned())),
-        rule => unimplemented!("Missing statement-generating rule {:?}", rule),
+        rule => Err(Trace::new(
+            Stage::AstBuilding,
+            Error::new_from_span(
+                ErrorVariant::CustomError {
+                    message: format!("Missing expression-generating rule `{:?}` handling", rule),
+                },
+                pair.as_span(),
+            ),
+        )),
     }
 }
 
 fn build_ast_from_statement(pair: Pair<Rule>) -> Result<Statement, Trace> {
     match pair.as_rule() {
-        Rule::expr => {
-            // TODO: change grammar to have negation token
-            let negated = {
-                let mut res = false;
-
-                for chunk in pair
-                    .as_span()
-                    .as_str()
-                    .chars()
-                    .collect::<Vec<char>>()
-                    .chunks_exact(3)
-                {
-                    match chunk {
-                        ['k', 'e', ' '] => res = !res,
-                        _ => break,
-                    }
-                }
-
-                res
-            };
-
-            Ok(Statement::Expr(build_ast_from_expr(
-                pair.into_inner().next().unwrap(),
-                negated,
-            )?))
-        }
+        Rule::expr => Ok(Statement::Expr(build_ast_from_expr(
+            pair.into_inner().next().unwrap(),
+        )?)),
         Rule::var_dec => {
             let span = pair.as_span();
 
@@ -165,14 +160,53 @@ fn build_ast_from_statement(pair: Pair<Rule>) -> Result<Statement, Trace> {
                     .map(|ident| ident.as_span().as_str().to_owned())
                     .collect(),
 
-                // TODO: handle negation (see comment in Rule::expr handling)
                 values: values
                     .iter()
-                    .map(|value| build_ast_from_expr(value.clone(), false))
+                    .map(|value| build_ast_from_expr(value.clone()))
                     .collect::<Result<Vec<Expr>, Trace>>()?,
             })
         }
-        rule => unimplemented!("Missing statement-generating rule {:?}", rule),
+        Rule::if_block => {
+            let mut children = pair.clone().into_inner();
+            fields!(children |> cond, then);
+
+            let cond = build_ast_from_expr(cond.into_inner().next().unwrap())?;
+
+            let then = then
+                .into_inner()
+                .map(|statement| handle(&pair, statement, build_ast_from_statement))
+                .collect::<Result<Vec<Statement>, Trace>>()?;
+
+            // The else case is not mandatory
+            if let Some(otherwise) = children.next() {
+                let otherwise = otherwise
+                    .into_inner()
+                    .map(|statement| handle(&pair, statement, build_ast_from_statement))
+                    .collect::<Result<Vec<Statement>, Trace>>()?;
+
+                Ok(Statement::If {
+                    cond,
+                    then,
+                    otherwise,
+                })
+            } else {
+                Ok(Statement::If {
+                    cond,
+                    then,
+                    otherwise: vec![],
+                })
+            }
+        }
+        Rule::statement => Ok(build_ast_from_statement(pair.into_inner().next().unwrap())?),
+        rule => Err(Trace::new(
+            Stage::AstBuilding,
+            Error::new_from_span(
+                ErrorVariant::CustomError {
+                    message: format!("Missing statement-generating rule `{:?}` handling", rule),
+                },
+                pair.as_span(),
+            ),
+        )),
     }
 }
 

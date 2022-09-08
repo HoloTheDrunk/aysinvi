@@ -35,6 +35,14 @@ impl From<Error<Rule>> for Trace {
     }
 }
 
+impl From<Box<Error<Rule>>> for Trace {
+    fn from(err: Box<Error<Rule>>) -> Self {
+        Trace {
+            stack: vec![(Stage::Unknown, *err)]
+        }
+    }
+}
+
 impl Trace {
     pub fn new(stage: Stage, err: Error<Rule>) -> Self {
         Trace {
