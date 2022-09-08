@@ -8,40 +8,41 @@ ident = @{ ('a'..'z' | "ì" | "ä" | "\'")+ }
 fun_ident = @{ ident ~ ("." ~ ident)? }
 
 expr = ${
-	("ke" ~ WHITESPACE)? ~ (
-        fun_call
-        | number
-        | string_container
-        | ident
-    )
+  negation
+  | fun_call
+  | number
+  | string_container
+  | ident
 }
 
+negation = { "ke" ~ WHITESPACE ~ expr }
+
 fun_call = !{
-	ident ~ (("fa" ~ expr ~ ("sì" ~ expr)*) | "si")
+  ident ~ (("fa" ~ expr ~ ("sì" ~ expr)*) | "si")
 }
 
 fun_dec = {
-    "lì'ukìng" ~ fun_ident ~ ("fa" ~ ident ~ ("sì" ~ ident)*)? ~ ("alu" ~ block_body ~ ( &"." | "txew"))?
+  "lì'ukìng" ~ fun_ident ~ ("fa" ~ ident ~ ("sì" ~ ident)*)? ~ ("alu" ~ block_body ~ ( &"." | "txew"))?
 }
 
 var_dec = {
-	("'u" | "meu" | "pxeu" | "ayu") ~ ident ~ ("sì" ~ ident)* ~ "alu" ~ expr ~ ("sì" ~ expr)*
+  ("'u" | "meu" | "pxeu" | "ayu") ~ ident ~ ("sì" ~ ident)* ~ "alu" ~ expr ~ ("sì" ~ expr)*
 }
 
 dec = _{
-	"ngop" ~ (fun_dec | var_dec)
+  "ngop" ~ (fun_dec | var_dec)
 }
 
 if_block = {
-	"txo" ~ expr ~ "," ~ "tsakrr" ~ block_body ~ (("," ~ "txokefyaw" ~ block_body) | ( &"." | "txew"))
+  "txo" ~ expr ~ "," ~ "tsakrr" ~ block_body ~ (("," ~ "txokefyaw" ~ block_body) | ( &"." | "txew"))
 }
 
 loop_block = {
-	"leyn" ~ ("vaykrr" ~ expr)? ~ "kem si" ~ block_body ~ "ftang"
+  "leyn" ~ ("vaykrr" ~ expr)? ~ "kem si" ~ block_body ~ "ftang"
 }
 
 statement = {
-	dec | if_block | loop_block | expr
+  dec | if_block | loop_block | expr
 }
 
 block_body = { statement ~ ("ulte" ~ statement)*}
