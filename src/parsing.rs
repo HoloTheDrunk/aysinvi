@@ -73,14 +73,21 @@ macro_rules! fields {
 
 fn build_ast_from_expr(pair: Pair<Rule>) -> Result<Expr, Trace> {
     match pair.as_rule() {
-        Rule::negation => {
-            let mut children = pair.into_inner();
-            fields!(children |> expr);
+        Rule::expr => build_ast_from_expr(pair.into_inner().next().unwrap()),
+        Rule::negation => Ok(Expr::Negated(Box::new(build_ast_from_expr(
+            pair.into_inner().next().unwrap(),
+        )?))),
+        Rule::fun_call => {
+            let mut children = pair.clone().into_inner();
+            fields!(children |> name);
 
-            // Desired expr is wrapped in a Rule::expr
-            Ok(Expr::Negated(Box::new(build_ast_from_expr(
-                expr.into_inner().next().unwrap(),
-            )?)))
+            let name = name.as_span().as_str().to_owned();
+
+            let args = children
+                .map(|arg| handle(&pair, arg, build_ast_from_expr))
+                .collect::<Result<Vec<Expr>, Trace>>()?;
+
+            Ok(Expr::FunCall { name, args })
         }
         Rule::number => {
             let span = pair.as_span();
@@ -124,9 +131,7 @@ fn build_ast_from_expr(pair: Pair<Rule>) -> Result<Expr, Trace> {
 
 fn build_ast_from_statement(pair: Pair<Rule>) -> Result<Statement, Trace> {
     match pair.as_rule() {
-        Rule::expr => Ok(Statement::Expr(build_ast_from_expr(
-            pair.into_inner().next().unwrap(),
-        )?)),
+        Rule::expr => Ok(Statement::Expr(build_ast_from_expr(pair)?)),
         Rule::var_dec => {
             let span = pair.as_span();
 
@@ -170,7 +175,7 @@ fn build_ast_from_statement(pair: Pair<Rule>) -> Result<Statement, Trace> {
             let mut children = pair.clone().into_inner();
             fields!(children |> cond, then);
 
-            let cond = build_ast_from_expr(cond.into_inner().next().unwrap())?;
+            let cond = build_ast_from_expr(cond)?;
 
             let then = then
                 .into_inner()
