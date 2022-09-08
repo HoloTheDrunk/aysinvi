@@ -18,15 +18,17 @@ The grammar is not fixed yet but some of the main goals of this project are:
        - [x] Singular variable definition
        - [x] Dual, trial and plural variable definition
      - [ ] Module definition
-   - [x] Expressions
+   - [ ] Expressions
      - [x] Literal parsing
        - [x] Numbers (temporary numeric form)
        - [x] Strings
+     - [ ] Data structures
+       - [ ] Arrays
      - [x] Identifiers
      - [x] Function calling
        - [x] Arity =0 `si` form
        - [x] Arity >1 `fa` form
- - [ ] AST building
+ - [ ] Parsed AST
    - [x] Expressions
      - [x] Numbers (temporary numeric form)
        - [x] Octal parsing
@@ -39,6 +41,8 @@ The grammar is not fixed yet but some of the main goals of this project are:
      - [x] Variable declaration
      - [x] If construct
      - [ ] Loop construct
+ - [ ] Bound AST
+ - [ ] Typed AST
  - [ ] Interpreter
  - [ ] Compiler
  - [ ] REPL
