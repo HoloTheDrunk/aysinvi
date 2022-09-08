@@ -14,11 +14,11 @@ The grammar is not fixed yet but some of the main goals of this project are:
      - [x] Function definition
        - [x] Infix position marking
        - [x] Arity 0 functions
-     - [ ] Variable definition
+     - [x] Variable definition
        - [x] Singular variable definition
-       - [ ] Dual, trial and plural variable definition
+       - [x] Dual, trial and plural variable definition
      - [ ] Module definition
-   - [ ] Expressions
+   - [x] Expressions
      - [x] Literal parsing
        - [x] Numbers (temporary numeric form)
        - [x] Strings
@@ -27,17 +27,17 @@ The grammar is not fixed yet but some of the main goals of this project are:
        - [x] Arity =0 `si` form
        - [x] Arity >1 `fa` form
  - [ ] AST building
-   - [ ] Expressions
+   - [x] Expressions
      - [x] Numbers (temporary numeric form)
        - [x] Octal parsing
        - [x] Multiplier (`melo`/`pxelo`) parsing
      - [x] Strings
      - [x] Identifiers
-     - [ ] Function calls
+     - [x] Function calls
    - [ ] Statements
      - [ ] Function declaration
-     - [ ] Variable declaration
-     - [ ] If construct
+     - [x] Variable declaration
+     - [x] If construct
      - [ ] Loop construct
  - [ ] Interpreter
  - [ ] Compiler
