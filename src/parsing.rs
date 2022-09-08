@@ -43,9 +43,9 @@ pub enum Expr {
 }
 
 /// Pushes new error onto stacktrace or returns pred(pair).
-fn handle<F, T>(parent: &Pair<Rule>, pair: Pair<Rule>, pred: F) -> Result<T, Trace>
+fn handle<F, T>(parent: &Pair<Rule>, pair: Pair<Rule>, pred: &F) -> Result<T, Trace>
 where
-    F: FnOnce(Pair<Rule>) -> Result<T, Trace>,
+    F: Fn(Pair<Rule>) -> Result<T, Trace>,
 {
     let (span, rule) = (parent.as_span(), parent.as_rule());
     pred(pair).map_err(|mut trace| {
@@ -63,6 +63,14 @@ where
     })
 }
 
+fn handle_iter<F, T>(parent: &Pair<Rule>, iter: &mut Pairs<Rule>, pred: &F) -> Result<Vec<T>, Trace>
+where
+    F: Fn(Pair<Rule>) -> Result<T, Trace>,
+{
+    iter.map(|item| handle(parent, item, pred))
+        .collect::<Result<Vec<T>, Trace>>()
+}
+
 macro_rules! fields {
     ($pair:ident |> $($field:ident),*) => {
         $(
@@ -73,19 +81,22 @@ macro_rules! fields {
 
 fn build_ast_from_expr(pair: Pair<Rule>) -> Result<Expr, Trace> {
     match pair.as_rule() {
-        Rule::expr => build_ast_from_expr(pair.into_inner().next().unwrap()),
-        Rule::negation => Ok(Expr::Negated(Box::new(build_ast_from_expr(
+        Rule::expr => handle(
+            &pair.clone(),
             pair.into_inner().next().unwrap(),
+            &build_ast_from_expr,
+        ),
+        Rule::negation => Ok(Expr::Negated(Box::new(handle(
+            &pair.clone(),
+            pair.into_inner().next().unwrap(),
+            &build_ast_from_expr,
         )?))),
         Rule::fun_call => {
             let mut children = pair.clone().into_inner();
             fields!(children |> name);
 
             let name = name.as_span().as_str().to_owned();
-
-            let args = children
-                .map(|arg| handle(&pair, arg, build_ast_from_expr))
-                .collect::<Result<Vec<Expr>, Trace>>()?;
+            let args = handle_iter(&pair, &mut children, &build_ast_from_expr)?;
 
             Ok(Expr::FunCall { name, args })
         }
@@ -131,7 +142,11 @@ fn build_ast_from_expr(pair: Pair<Rule>) -> Result<Expr, Trace> {
 
 fn build_ast_from_statement(pair: Pair<Rule>) -> Result<Statement, Trace> {
     match pair.as_rule() {
-        Rule::expr => Ok(Statement::Expr(build_ast_from_expr(pair)?)),
+        Rule::expr => Ok(Statement::Expr(handle(
+            &pair.clone(),
+            pair,
+            &build_ast_from_expr,
+        )?)),
         Rule::var_dec => {
             let span = pair.as_span();
 
@@ -177,17 +192,15 @@ fn build_ast_from_statement(pair: Pair<Rule>) -> Result<Statement, Trace> {
 
             let cond = build_ast_from_expr(cond)?;
 
-            let then = then
-                .into_inner()
-                .map(|statement| handle(&pair, statement, build_ast_from_statement))
-                .collect::<Result<Vec<Statement>, Trace>>()?;
+            let then = handle_iter(&pair, &mut then.into_inner(), &build_ast_from_statement)?;
 
             // The else case is not mandatory
             if let Some(otherwise) = children.next() {
-                let otherwise = otherwise
-                    .into_inner()
-                    .map(|statement| handle(&pair, statement, build_ast_from_statement))
-                    .collect::<Result<Vec<Statement>, Trace>>()?;
+                let otherwise = handle_iter(
+                    &pair,
+                    &mut otherwise.into_inner(),
+                    &build_ast_from_statement,
+                )?;
 
                 Ok(Statement::If {
                     cond,
