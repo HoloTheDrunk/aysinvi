@@ -116,7 +116,7 @@ fn build_ast_from_expr(pair: Pair<Rule>) -> Result<Expr, Trace> {
                     Stage::Parsing,
                     Error::new_from_span(
                         ErrorVariant::ParsingError {
-                            positives: vec![],
+                            positives: vec![Rule::number],
                             negatives: vec![],
                         },
                         span,
@@ -127,7 +127,7 @@ fn build_ast_from_expr(pair: Pair<Rule>) -> Result<Expr, Trace> {
             Ok(Expr::Number(result))
         }
         Rule::string => Ok(Expr::String(pair.as_span().as_str().to_owned())),
-        Rule::ident => Ok(Expr::Ident(pair.as_span().as_str().to_owned())),
+        Rule::ident | Rule::fun_ident => Ok(Expr::Ident(pair.as_span().as_str().to_owned())),
         rule => Err(Trace::new(
             Stage::AstBuilding,
             Error::new_from_span(
@@ -147,6 +147,21 @@ fn build_ast_from_statement(pair: Pair<Rule>) -> Result<Statement, Trace> {
             pair,
             &build_ast_from_expr,
         )?)),
+        Rule::fun_dec => {
+            let span = pair.as_span();
+
+            let mut children = pair.clone().into_inner();
+            fields!(children |> name, args, body);
+
+            let name = name.as_span().as_str().to_owned();
+            let args = args
+                .into_inner()
+                .map(|arg| arg.as_span().as_str().to_owned())
+                .collect::<Vec<String>>();
+            let body = handle_iter(&pair, &mut body.into_inner(), &build_ast_from_statement)?;
+
+            Ok(Statement::FunDec { name, args, body })
+        }
         Rule::var_dec => {
             let span = pair.as_span();
 

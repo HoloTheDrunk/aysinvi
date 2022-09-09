@@ -22,7 +22,11 @@ fun_call = !{
 }
 
 fun_dec = {
-  "lì'ukìng" ~ fun_ident ~ ("fa" ~ ident ~ ("sì" ~ ident)*)? ~ ("alu" ~ block_body ~ ( &"." | "txew"))?
+  "lì'ukìng" ~ fun_ident ~ fun_dec_args? ~ ("alu" ~ block_body ~ ( &"." | "txew"))?
+}
+
+fun_dec_args = {
+  "fa" ~ ident ~ ("sì" ~ ident)*
 }
 
 var_dec = {
