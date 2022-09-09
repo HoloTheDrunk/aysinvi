@@ -121,12 +121,12 @@ fn build_ast_from_expr(pair: Pair<Rule>) -> Result<Expr, Trace> {
 
             // Bit unnecessary but better be safe than sorry
             let mult = if let Some(mult) = elems.next() {
-                Multiplier::from_str(mult).map_err(|err| {
+                Multiplier::from_str(mult).map_err(|_| {
                     Trace::new(
                         Stage::Parsing,
                         Error::new_from_span(
                             ErrorVariant::CustomError {
-                                message: format!("{err}: `{mult}`"),
+                                message: format!("Unimplemented multiplier: `{mult}`"),
                             },
                             span,
                         ),
