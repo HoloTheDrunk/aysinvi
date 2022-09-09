@@ -6,5 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+# Core
 pest = "2.0"
 pest_derive = "2.0"
+
+# T-2: Code cleanliness
+strum = "0.24"
+strum_macros = "0.24"

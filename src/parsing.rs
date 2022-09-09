@@ -1,9 +1,14 @@
 use crate::error::*;
 
-use pest::{
-    error::{Error, ErrorVariant},
-    iterators::{Pair, Pairs},
-    Parser,
+use std::str::FromStr;
+
+use {
+    pest::{
+        error::{Error, ErrorVariant},
+        iterators::{Pair, Pairs},
+        Parser,
+    },
+    strum_macros::EnumString,
 };
 
 #[derive(Parser)]
@@ -40,6 +45,15 @@ pub enum Expr {
     String(String),
     Ident(String),
     Negated(Box<Expr>),
+}
+
+#[derive(Debug, EnumString)]
+#[repr(i64)]
+pub enum Multiplier {
+    #[strum(serialize = "melo")]
+    Double = 2,
+    #[strum(serialize = "pxelo")]
+    Triple = 3,
 }
 
 /// Pushes new error onto stacktrace or returns pred(pair).
@@ -104,11 +118,22 @@ fn build_ast_from_expr(pair: Pair<Rule>) -> Result<Expr, Trace> {
             let span = pair.as_span();
             let mut elems = span.as_str().split_whitespace();
             let number = elems.next().unwrap();
-            let mult: i64 = match elems.next() {
-                Some("melo") => 2,
-                Some("pxelo") => 3,
-                None => 1,
-                _ => unimplemented!("We shouldn't be here"),
+
+            // Bit unnecessary but better be safe than sorry
+            let mult = if let Some(mult) = elems.next() {
+                Multiplier::from_str(mult).map_err(|err| {
+                    Trace::new(
+                        Stage::Parsing,
+                        Error::new_from_span(
+                            ErrorVariant::CustomError {
+                                message: format!("{err}: `{mult}`"),
+                            },
+                            span,
+                        ),
+                    )
+                })? as i64
+            } else {
+                1
             };
 
             let result = i64::from_str_radix(number, 8).map_err(|_| {
