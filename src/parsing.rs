@@ -95,11 +95,7 @@ macro_rules! fields {
 
 fn build_ast_from_expr(pair: Pair<Rule>) -> Result<Expr, Trace> {
     match pair.as_rule() {
-        Rule::expr => handle(
-            &pair.clone(),
-            pair.into_inner().next().unwrap(),
-            &build_ast_from_expr,
-        ),
+        Rule::expr => build_ast_from_expr(pair.into_inner().next().unwrap()),
         Rule::negation => Ok(Expr::Negated(Box::new(handle(
             &pair.clone(),
             pair.into_inner().next().unwrap(),
