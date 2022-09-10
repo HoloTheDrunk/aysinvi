@@ -60,7 +60,7 @@ impl std::fmt::Display for Trace {
                 .iter()
                 .map(|(stage, err)| {
                     format!(
-                        "--> {}\n{}\n |{}\n = {}\n",
+                        "--> {stage:?} | {}\n{}\n |{}\n = {}\n",
                         // Error coordinates
                         match err.line_col {
                             LineColLocation::Pos((y, x)) => format!("{y}:{x}"),
