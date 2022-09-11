@@ -7,11 +7,11 @@ use pest::{
 
 #[derive(Debug)]
 pub enum Stage {
+    Unknown,
     Parsing,
     AstBuilding,
     Typing,
     Compiling,
-    Unknown,
 }
 
 #[derive(Debug)]
@@ -30,7 +30,7 @@ impl From<(Stage, Error<Rule>)> for Trace {
 impl From<Error<Rule>> for Trace {
     fn from(err: Error<Rule>) -> Self {
         Trace {
-            stack: vec![(Stage::Unknown, err)],
+            stack: vec![(Stage::Parsing, err)],
         }
     }
 }
@@ -38,7 +38,7 @@ impl From<Error<Rule>> for Trace {
 impl From<Box<Error<Rule>>> for Trace {
     fn from(err: Box<Error<Rule>>) -> Self {
         Trace {
-            stack: vec![(Stage::Unknown, *err)],
+            stack: vec![(Stage::Parsing, *err)],
         }
     }
 }
@@ -59,44 +59,50 @@ impl std::fmt::Display for Trace {
             self.stack
                 .iter()
                 .map(|(stage, err)| {
+                    let line_nbr = match err.line_col {
+                        LineColLocation::Pos((y, _)) => y,
+                        LineColLocation::Span((ys, _), _) => ys,
+                    };
+
+                    let line_nbr_len = line_nbr.to_string().len();
+
+                    let padding = " ".repeat(line_nbr_len);
+
+                    let arrow = format!("{}>", "-".repeat(line_nbr_len));
+
+                    // Error coordinates
+                    let coords = match err.line_col {
+                        LineColLocation::Pos((y, x)) => format!("{y}:{x}"),
+                        LineColLocation::Span((ys, xs), (ye, xe)) => {
+                            format!("{ys}:{xs} -> {ye}:{xe}")
+                        }
+                    };
+
+                    // Underline
+                    let underline = match err.line_col {
+                        LineColLocation::Pos((_, x)) => format!("{}^", " ".repeat(x)),
+                        LineColLocation::Span((ys, xs), (ye, xe)) => {
+                            if ys == ye {
+                                format!("{}^{}^", " ".repeat(xs), "-".repeat(xe - xs - 1))
+                            } else {
+                                format!("{}^{}", " ".repeat(xs), "-".repeat(err.line().len() - xs))
+                            }
+                        }
+                    };
+
+                    // ---> STAGE | COORDS
+                    //    |
+                    // NBR| LINE
+                    //    | UNDERLINE
+                    //    = ERROR
                     format!(
-                        "--> {stage:?} | {}\n{}\n |{}\n = {}\n",
-                        // Error coordinates
-                        match err.line_col {
-                            LineColLocation::Pos((y, x)) => format!("{y}:{x}"),
-                            LineColLocation::Span((ys, xs), (ye, xe)) =>
-                                format!("{ys}:{xs} -> {ye}:{xe}"),
-                        },
+                        "{arrow} {stage:?} | {coords}\n\
+                         {padding}|\n\
+                         {}\n\
+                         {padding}|{underline}\n\
+                         {padding}= {}\n",
                         // Line number and line
-                        format_args!(
-                            " |\n{}| {}",
-                            match err.line_col {
-                                LineColLocation::Pos((y, _)) => y,
-                                LineColLocation::Span((ys, _), _) => ys,
-                            },
-                            err.line()
-                        ),
-                        // Underline
-                        match err.line_col {
-                            LineColLocation::Pos((_, x)) =>
-                                format!("{}^", (0..(x)).map(|_| " ").collect::<String>()),
-                            LineColLocation::Span((ys, xs), (ye, xe)) =>
-                                if ys == ye {
-                                    format!(
-                                        "{}^{}^",
-                                        (0..(xs)).map(|_| " ").collect::<String>(),
-                                        (0..(xe - xs - 1)).map(|_| "-").collect::<String>()
-                                    )
-                                } else {
-                                    format!(
-                                        "{}^{}",
-                                        (0..(xs)).map(|_| " ").collect::<String>(),
-                                        (0..(err.line().len() - xs))
-                                            .map(|_| "-")
-                                            .collect::<String>()
-                                    )
-                                },
-                        },
+                        format_args!("{}| {}", line_nbr, err.line()),
                         // Error
                         err.variant.message()
                     )
