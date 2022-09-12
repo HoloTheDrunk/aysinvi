@@ -22,7 +22,7 @@ The grammar is not fixed yet but some of the main goals of this project are:
      - [x] Variable definition
        - [x] Singular variable definition
        - [x] Dual, trial and plural variable definition
-     - [ ] Module definition
+     - [ ] Module definition / inclusion
    - [ ] Expressions
      - [x] Literal parsing
        - [x] Numbers (temporary numeric form)
