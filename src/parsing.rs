@@ -86,10 +86,23 @@ where
 }
 
 macro_rules! fields {
-    ($pair:ident |> $($field:ident),*) => {
+    ($pair:ident |> $children:ident $(: $($field:ident),*)?) => {
+        let mut $children = $pair.clone().into_inner();
+
         $(
-            let $field = $pair.next().expect(format!("Missing field `{}`", stringify!($field)).as_str());
-        )+
+            $(
+                let $field = $children
+                    .next()
+                    .ok_or_else(|| Trace::new(
+                        Stage::Parsing,
+                        Error::new_from_span(
+                            ErrorVariant::ParsingError {
+                                positives: vec![$pair.as_rule()],
+                                negatives: vec![]
+                            },
+                            $pair.as_span())))?;
+            )*
+        )?
     };
 }
 
@@ -102,13 +115,15 @@ fn build_ast_from_expr(pair: Pair<Rule>) -> Result<Expr, Trace> {
             &build_ast_from_expr,
         )?))),
         Rule::fun_call => {
-            let mut children = pair.clone().into_inner();
-            fields!(children |> name);
+            fields!(pair |> children: name);
 
             let name = name.as_span().as_str().to_owned();
             let args = handle_iter(&pair, &mut children, &build_ast_from_expr)?;
 
             Ok(Expr::FunCall { name, args })
+        }
+        Rule::array => {
+            todo!()
         }
         Rule::number => {
             let span = pair.as_span();
@@ -171,8 +186,7 @@ fn build_ast_from_statement(pair: Pair<Rule>) -> Result<Statement, Trace> {
         Rule::fun_dec => {
             let span = pair.as_span();
 
-            let mut children = pair.clone().into_inner();
-            fields!(children |> name, args, body);
+            fields!(pair |> children: name, args, body);
 
             let name = name.as_span().as_str().to_owned();
             let args = args
@@ -224,7 +238,7 @@ fn build_ast_from_statement(pair: Pair<Rule>) -> Result<Statement, Trace> {
         }
         Rule::if_block => {
             let mut children = pair.clone().into_inner();
-            fields!(children |> cond, then);
+            fields!(pair |> children: cond, then);
 
             let cond = build_ast_from_expr(cond)?;
 
