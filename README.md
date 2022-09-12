@@ -23,12 +23,12 @@ The grammar is not fixed yet but some of the main goals of this project are:
        - [x] Singular variable definition
        - [x] Dual, trial and plural variable definition
      - [ ] Module definition / inclusion
-   - [ ] Expressions
+   - [x] Expressions
      - [x] Literal parsing
        - [x] Numbers (temporary numeric form)
        - [x] Strings
-     - [ ] Data structures
-       - [ ] Arrays
+     - [x] Data structures
+       - [x] Arrays
      - [x] Identifiers
      - [x] Comparisons
      - [x] Function calling
