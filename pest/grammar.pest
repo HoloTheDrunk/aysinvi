@@ -1,6 +1,8 @@
 WHITESPACE = _{ " " | "\t" | NEWLINE }
 COMMENT = _{ "''" ~ (!(NEWLINE | "''") ~ ANY)* ~ (NEWLINE | "''") }
 
+ws = _{ WHITESPACE+ }
+
 string = { (!(WHITESPACE ~ "sìk") ~ ANY)* }
 string_container = _{ "san" ~ WHITESPACE ~ string ~ WHITESPACE ~ "sìk" }
 number = @{ ASCII_OCT_DIGIT+ ~ (WHITESPACE ~ ("melo" | "pxelo"))? }
@@ -10,12 +12,16 @@ fun_ident = @{ ident ~ ("." ~ ident)? }
 expr = ${
   negation
   | fun_call
+  | comparison
   | number
   | string_container
   | ident
 }
 
 negation = { "ke" ~ WHITESPACE ~ expr }
+
+comparison = ${ "may'" ~ ws ~ expr ~ ws ~ "sì" ~ ws ~ expr ~ ws ~ "livu" ~ ws ~ comparison_operator }
+comparison_operator = { "teng" }
 
 fun_call = !{
   ident ~ (("fa" ~ expr ~ ("sì" ~ expr)*) | "si")

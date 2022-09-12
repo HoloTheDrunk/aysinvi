@@ -11,9 +11,9 @@ The grammar is not fixed yet but some of the main goals of this project are:
 ## Progress
  - [ ] Grammar
    - [ ] Statements
-     - [ ] If construct
+     - [x] If construct
        - [x] Truthy condition
-       - [ ] Comparison condition 
+       - [x] Comparison condition 
      - [x] Loop construct
      - [x] Function definition
        - [x] Infix position marking
@@ -30,7 +30,7 @@ The grammar is not fixed yet but some of the main goals of this project are:
      - [ ] Data structures
        - [ ] Arrays
      - [x] Identifiers
-     - [ ] Comparisons
+     - [x] Comparisons
      - [x] Function calling
        - [x] Arity =0 `si` form
        - [x] Arity >1 `fa` form
