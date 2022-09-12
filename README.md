@@ -11,9 +11,14 @@ The grammar is not fixed yet but some of the main goals of this project are:
 ## Progress
  - [ ] Grammar
    - [ ] Statements
+     - [ ] If construct
+       - [x] Truthy condition
+       - [ ] Comparison condition 
+     - [x] Loop construct
      - [x] Function definition
        - [x] Infix position marking
-       - [x] Arity 0 functions
+       - [x] Arity =0 functions
+       - [x] Arity >1 functions
      - [x] Variable definition
        - [x] Singular variable definition
        - [x] Dual, trial and plural variable definition
@@ -25,22 +30,27 @@ The grammar is not fixed yet but some of the main goals of this project are:
      - [ ] Data structures
        - [ ] Arrays
      - [x] Identifiers
+     - [ ] Comparisons
      - [x] Function calling
        - [x] Arity =0 `si` form
        - [x] Arity >1 `fa` form
  - [ ] Parsed AST
-   - [x] Expressions
-     - [x] Numbers (temporary numeric form)
-       - [x] Octal parsing
-       - [x] Multiplier (`melo`/`pxelo`) parsing
-     - [x] Strings
-     - [x] Identifiers
-     - [x] Function calls
    - [ ] Statements
-     - [x] Function declaration
-     - [x] Variable declaration
      - [x] If construct
      - [ ] Loop construct
+     - [x] Function declaration
+     - [x] Variable declaration
+   - [ ] Expressions
+     - [x] Literals
+       - [x] Numbers (temporary numeric form)
+         - [x] Octal parsing
+         - [x] Multiplier (`melo`/`pxelo`) parsing
+       - [x] Strings
+     - [ ] Data structures
+       - [ ] Arrays
+     - [x] Identifiers
+     - [ ] Comparisons
+     - [x] Function calls
  - [ ] Bound AST
  - [ ] Typed AST
  - [ ] Interpreter
