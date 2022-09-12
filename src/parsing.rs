@@ -88,7 +88,7 @@ where
 macro_rules! fields {
     ($pair:ident |> $($field:ident),*) => {
         $(
-            let $field = $pair.next().unwrap();
+            let $field = $pair.next().expect(format!("Missing field `{}`", stringify!($field)).as_str());
         )+
     };
 }
