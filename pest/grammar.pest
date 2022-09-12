@@ -9,10 +9,14 @@ number = @{ ASCII_OCT_DIGIT+ ~ (WHITESPACE ~ ("melo" | "pxelo"))? }
 ident = @{ ('a'..'z' | "ì" | "ä" | "\'")+ }
 fun_ident = @{ ident ~ ("." ~ ident)? }
 
+array = @{ "vezeykoyu" ~ (ws ~ array_items)? }
+array_items = ${ expr ~ (ws ~ "sì" ~ ws ~ expr)* }
+
 expr = ${
   negation
   | fun_call
   | comparison
+  | array
   | number
   | string_container
   | ident
