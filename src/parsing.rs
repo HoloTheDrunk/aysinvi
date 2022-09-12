@@ -41,6 +41,7 @@ pub enum Statement {
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Expr {
     FunCall { name: String, args: Vec<Expr> },
+    Array { items: Vec<Expr> },
     Number(i64),
     String(String),
     Ident(String),
@@ -123,6 +124,13 @@ fn build_ast_from_expr(pair: Pair<Rule>) -> Result<Expr, Trace> {
             Ok(Expr::FunCall { name, args })
         }
         Rule::array => {
+            fields!(pair |> children: items);
+
+            let items = handle_iter(&pair, &mut items.into_inner(), &build_ast_from_expr)?;
+
+            Ok(Expr::Array { items })
+        }
+        Rule::comparison => {
             todo!()
         }
         Rule::number => {
