@@ -9,8 +9,9 @@ The grammar is not fixed yet but some of the main goals of this project are:
  - building an actually usable standard library that interfaces with lower level APIs to make this esolang technically productive.
 
 ## Progress
- - [ ] Grammar
-   - [ ] Statements
+ - [x] Grammar
+   - [x] Module inclusion
+   - [x] Statements
      - [x] If construct
        - [x] Truthy condition
        - [x] Comparison condition 
@@ -22,7 +23,6 @@ The grammar is not fixed yet but some of the main goals of this project are:
      - [x] Variable definition
        - [x] Singular variable definition
        - [x] Dual, trial and plural variable definition
-     - [ ] Module definition / inclusion
    - [x] Expressions
      - [x] Literal parsing
        - [x] Numbers (temporary numeric form)
@@ -35,6 +35,7 @@ The grammar is not fixed yet but some of the main goals of this project are:
        - [x] Arity =0 `si` form
        - [x] Arity >1 `fa` form
  - [ ] Parsed AST
+   - [x] Module inclusion
    - [ ] Statements
      - [x] If construct
      - [ ] Loop construct

@@ -1,12 +1,13 @@
 WHITESPACE = _{ " " | "\t" | NEWLINE }
 COMMENT = _{ "''" ~ (!(NEWLINE | "''") ~ ANY)* ~ (NEWLINE | "''") }
+NAVCHAR = _{ 'a'..'z' | "ì" | "ä" | "\'" }
 
 ws = _{ WHITESPACE+ }
 
 string = { (!(ws ~ "sìk") ~ ANY)* }
 string_container = _{ "san" ~ ws ~ string ~ ws ~ "sìk" }
 number = @{ ASCII_OCT_DIGIT+ ~ (ws ~ ("melo" | "pxelo"))? }
-ident = @{ ('a'..'z' | "ì" | "ä" | "\'")+ }
+ident = @{ NAVCHAR+ }
 fun_ident = @{ ident ~ ("." ~ ident)? }
 
 array = @{ "vezeykoyu" ~ (ws ~ array_items)? }
@@ -59,6 +60,28 @@ statement = {
   dec | if_block | loop_block | expr
 }
 
+mod_use = ${
+  "sar" ~ (ws ~ possessive)* ~ ws ~ ident
+}
+
+possessive = @{
+  (!possessive_ending ~ NAVCHAR)* ~ possessive_ending
+}
+
+possessive_ending = @{
+  (
+    (
+      ( "a" | "ä" | "e" | "i" | "ì" ) ~ "yä"
+    )
+    |
+    (
+      ( "f" | "h" | "k" | "l" | "m" | "n" | "ng" | "p"
+      | "r" | "s" | "t" | "v" | "w" | "y" | "z" )
+      ~ "ä"
+    )
+  )
+}
+
 block_body = { statement ~ ("ulte" ~ statement)*}
 
-program = _{ SOI ~ (statement ~ ".")* ~ EOI }
+program = _{ SOI ~ (mod_use ~ ".")* ~ (statement ~ ".")* ~ EOI }

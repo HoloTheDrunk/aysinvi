@@ -16,8 +16,7 @@ use pest::{
 };
 
 fn main() {
-    let unparsed_file =
-        std::fs::read_to_string("examples/negated_redund.ay").expect("Cannot read file");
+    let unparsed_file = std::fs::read_to_string("examples/mod.ay").expect("Cannot read file");
 
     match parse(&unparsed_file) {
         Ok(ast) => println!("{:#?}", ast),

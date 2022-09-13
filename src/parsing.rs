@@ -333,6 +333,29 @@ pub fn parse(source: &str) -> Result<Vec<Statement>, Trace> {
 
     for pair in pairs {
         match pair.as_rule() {
+            Rule::mod_use => {
+                // Bit of a nightmare but it seems to work
+                let path = pair
+                    .clone()
+                    .into_inner()
+                    .map(|child| match child.as_rule() {
+                        Rule::possessive => format!(
+                            "{}/",
+                            child
+                                .as_str()
+                                .strip_suffix("yä")
+                                .unwrap_or_else(|| child.as_str().strip_suffix('ä').unwrap())
+                        ),
+                        Rule::ident => format!("{}.ay", child.as_str()),
+                        _ => unreachable!(),
+                    })
+                    .collect::<String>();
+
+                let imported_file = std::fs::read_to_string(path.clone())
+                    .unwrap_or_else(|_| panic!("Cannot read file `{path}`"));
+
+                ast.extend(parse(imported_file.as_ref())?);
+            }
             Rule::statement => ast.push(build_ast_from_statement(pair)?),
             Rule::EOI => {}
             unknown_rule => Err(Error::new_from_span(
@@ -351,6 +374,7 @@ pub fn recursive_print(cur: Option<&Pair<Rule>>, depth: u8) {
     if let Some(node) = cur {
         let rule = node.as_rule();
 
+        // TODO: simplify this using .repeat()
         let indent = (0..depth)
             .map(|_| "\x1b[32m|   \x1b[0m")
             .collect::<String>();
