@@ -3,9 +3,9 @@ COMMENT = _{ "''" ~ (!(NEWLINE | "''") ~ ANY)* ~ (NEWLINE | "''") }
 
 ws = _{ WHITESPACE+ }
 
-string = { (!(WHITESPACE ~ "sìk") ~ ANY)* }
-string_container = _{ "san" ~ WHITESPACE ~ string ~ WHITESPACE ~ "sìk" }
-number = @{ ASCII_OCT_DIGIT+ ~ (WHITESPACE ~ ("melo" | "pxelo"))? }
+string = { (!(ws ~ "sìk") ~ ANY)* }
+string_container = _{ "san" ~ ws ~ string ~ ws ~ "sìk" }
+number = @{ ASCII_OCT_DIGIT+ ~ (ws ~ ("melo" | "pxelo"))? }
 ident = @{ ('a'..'z' | "ì" | "ä" | "\'")+ }
 fun_ident = @{ ident ~ ("." ~ ident)? }
 

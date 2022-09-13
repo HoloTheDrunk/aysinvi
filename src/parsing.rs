@@ -40,8 +40,18 @@ pub enum Statement {
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Expr {
-    FunCall { name: String, args: Vec<Expr> },
-    Array { items: Vec<Expr> },
+    FunCall {
+        name: String,
+        args: Vec<Expr>,
+    },
+    Array {
+        items: Vec<Expr>,
+    },
+    Comparison {
+        left: Box<Expr>,
+        right: Box<Expr>,
+        operator: ComparisonOperator,
+    },
     Number(i64),
     String(String),
     Ident(String),
@@ -55,6 +65,12 @@ pub enum Multiplier {
     Double = 2,
     #[strum(serialize = "pxelo")]
     Triple = 3,
+}
+
+#[derive(Debug, EnumString, PartialEq, Eq, Clone)]
+pub enum ComparisonOperator {
+    #[strum(serialize = "teng")]
+    Equals,
 }
 
 /// Pushes new error onto stacktrace or returns pred(pair).
@@ -131,7 +147,27 @@ fn build_ast_from_expr(pair: Pair<Rule>) -> Result<Expr, Trace> {
             Ok(Expr::Array { items })
         }
         Rule::comparison => {
-            todo!()
+            fields!(pair |> children: left, right, comparison);
+
+            let left = handle(&pair, left, &build_ast_from_expr)?;
+            let right = handle(&pair, right, &build_ast_from_expr)?;
+            let operator = ComparisonOperator::from_str(comparison.as_str()).map_err(|_| {
+                Trace::new(
+                    Stage::Parsing,
+                    Error::new_from_span(
+                        ErrorVariant::CustomError {
+                            message: format!("Unimplemented comparison operator: `{comparison}`"),
+                        },
+                        pair.as_span(),
+                    ),
+                )
+            })?;
+
+            Ok(Expr::Comparison {
+                left: Box::new(left),
+                right: Box::new(right),
+                operator,
+            })
         }
         Rule::number => {
             let span = pair.as_span();
