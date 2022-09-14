@@ -65,18 +65,20 @@ mod_use = ${
 }
 
 possessive = @{
-  (!possessive_ending ~ NAVCHAR)* ~ possessive_ending
+  (!possessive_ending ~ (NAVCHAR | " "))* ~ possessive_ending
 }
 
 possessive_ending = @{
   (
     (
+      // Vowel endings
       ( "a" | "ä" | "e" | "i" | "ì" ) ~ "yä"
     )
     |
     (
-      ( "f" | "h" | "k" | "l" | "m" | "n" | "ng" | "p"
-      | "r" | "s" | "t" | "v" | "w" | "y" | "z" )
+      // Consonant endings
+      ( "'" | "f" | "h" | "k" | "kx" | "l" | "m" | "n" | "ng"
+      | "p" | "px" | "r" | "s" | "t" | "ts" | "tx" | "v" | "w" | "y" | "z" )
       ~ "ä"
     )
   )
