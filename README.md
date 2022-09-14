@@ -41,16 +41,16 @@ The grammar is not fixed yet but some of the main goals of this project are:
      - [ ] Loop construct
      - [x] Function declaration
      - [x] Variable declaration
-   - [ ] Expressions
+   - [x] Expressions
      - [x] Literals
        - [x] Numbers (temporary numeric form)
          - [x] Octal parsing
          - [x] Multiplier (`melo`/`pxelo`) parsing
        - [x] Strings
-     - [ ] Data structures
-       - [ ] Arrays
+     - [x] Data structures
+       - [x] Arrays
      - [x] Identifiers
-     - [ ] Comparisons
+     - [x] Comparisons
      - [x] Function calls
  - [ ] Bound AST
  - [ ] Typed AST
