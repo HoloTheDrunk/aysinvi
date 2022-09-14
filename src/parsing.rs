@@ -230,14 +230,19 @@ fn build_ast_from_statement(pair: Pair<Rule>) -> Result<Statement, Trace> {
         Rule::fun_dec => {
             let span = pair.as_span();
 
-            fields!(pair |> children: name, args, body);
+            fields!(pair |> children: name);
 
             let name = name.as_span().as_str().to_owned();
-            let args = args
-                .into_inner()
-                .map(|arg| arg.as_span().as_str().to_owned())
-                .collect::<Vec<String>>();
-            let body = handle_iter(&pair, &mut body.into_inner(), &build_ast_from_statement)?;
+
+            let args = children.next().map_or(vec![], |args| {
+                args.into_inner()
+                    .map(|arg| arg.as_span().as_str().to_owned())
+                    .collect::<Vec<String>>()
+            });
+
+            let body = children.next().map_or(Ok(vec![]), |body| {
+                handle_iter(&pair, &mut body.into_inner(), &build_ast_from_statement)
+            })?;
 
             Ok(Statement::FunDec { name, args, body })
         }
