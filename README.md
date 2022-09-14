@@ -34,11 +34,11 @@ The grammar is not fixed yet but some of the main goals of this project are:
      - [x] Function calling
        - [x] Arity =0 `si` form
        - [x] Arity >1 `fa` form
- - [ ] Parsed AST
+ - [x] Parsed AST
    - [x] Module inclusion
-   - [ ] Statements
+   - [x] Statements
      - [x] If construct
-     - [ ] Loop construct
+     - [x] Loop construct
      - [x] Function declaration
      - [x] Variable declaration
    - [x] Expressions
