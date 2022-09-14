@@ -1,6 +1,6 @@
 use crate::error::*;
 
-use std::str::FromStr;
+use std::{path::Path, str::FromStr};
 
 use {
     pest::{
@@ -10,6 +10,12 @@ use {
     },
     strum_macros::EnumString,
 };
+
+#[derive(Debug, PartialEq)]
+pub enum SourceCode {
+    File(String),
+    Content(String),
+}
 
 #[derive(Parser)]
 #[grammar = "../pest/grammar.pest"]
@@ -349,10 +355,19 @@ fn build_ast_from_statement(pair: Pair<Rule>) -> Result<Statement, Trace> {
     }
 }
 
-pub fn parse(source: &str) -> Result<Vec<Statement>, Trace> {
-    let mut ast = vec![];
+pub fn parse(source: SourceCode) -> Result<Vec<Statement>, Trace> {
+    let mut ast: Vec<Statement> = vec![];
 
-    let pairs = AyParser::parse(Rule::program, source)?;
+    let (mut path, content) = match source {
+        SourceCode::File(path) => {
+            let unparsed_file = std::fs::read_to_string(path.as_str())
+                .unwrap_or_else(|_| panic!("Cannot read file at `{path}`"));
+            (Some(path), unparsed_file)
+        }
+        SourceCode::Content(content) => (None, content),
+    };
+
+    let pairs = AyParser::parse(Rule::program, content.as_ref())?;
 
     for pair in pairs.clone() {
         recursive_print(Some(&pair), 0);
@@ -361,27 +376,41 @@ pub fn parse(source: &str) -> Result<Vec<Statement>, Trace> {
     for pair in pairs {
         match pair.as_rule() {
             Rule::mod_use => {
-                // Bit of a nightmare but it seems to work
-                let path = pair
-                    .clone()
-                    .into_inner()
-                    .map(|child| match child.as_rule() {
-                        Rule::possessive => format!(
-                            "{}/",
-                            child
-                                .as_str()
-                                .strip_suffix("yä")
-                                .unwrap_or_else(|| child.as_str().strip_suffix('ä').unwrap())
+                if let Some(ref mut path) = path {
+                    // Bit of a nightmare but it seems to work
+                    let parent = Path::new(path).parent().unwrap().to_str().unwrap();
+
+                    let path = format!(
+                        "{parent}/{}",
+                        pair.clone()
+                            .into_inner()
+                            .map(|child| match child.as_rule() {
+                                Rule::possessive => format!(
+                                    "{}/",
+                                    child.as_str().strip_suffix("yä").unwrap_or_else(|| child
+                                        .as_str()
+                                        .strip_suffix('ä')
+                                        .unwrap())
+                                ),
+                                Rule::ident => format!("{}.ay", child.as_str()),
+                                _ => unreachable!(),
+                            })
+                            .collect::<String>()
+                    );
+
+                    eprintln!("Using {path}");
+                    ast.extend(parse(SourceCode::File(path.clone()))?);
+                } else {
+                    return Err(Trace::new(
+                        Stage::AstBuilding,
+                        Error::new_from_span(
+                            ErrorVariant::CustomError {
+                                message: "Missing script directory information".to_owned(),
+                            },
+                            pair.as_span(),
                         ),
-                        Rule::ident => format!("{}.ay", child.as_str()),
-                        _ => unreachable!(),
-                    })
-                    .collect::<String>();
-
-                let imported_file = std::fs::read_to_string(path.clone())
-                    .unwrap_or_else(|_| panic!("Cannot read file `{path}`"));
-
-                ast.extend(parse(imported_file.as_ref())?);
+                    ));
+                }
             }
             Rule::statement => ast.push(build_ast_from_statement(pair)?),
             Rule::EOI => {}

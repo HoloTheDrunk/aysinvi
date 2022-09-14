@@ -4,6 +4,7 @@ NAVCHAR = _{ 'a'..'z' | "ì" | "ä" | "\'" }
 
 ws = _{ WHITESPACE+ }
 
+// NOTE
 string = { (!(ws ~ "sìk") ~ ANY)* }
 string_container = _{ "san" ~ ws ~ string ~ ws ~ "sìk" }
 number = @{ ASCII_OCT_DIGIT+ ~ (ws ~ ("melo" | "pxelo"))? }

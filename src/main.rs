@@ -16,9 +16,7 @@ use pest::{
 };
 
 fn main() {
-    let unparsed_file = std::fs::read_to_string("examples/mod.ay").expect("Cannot read file");
-
-    match parse(&unparsed_file) {
+    match parse(SourceCode::File("examples/mod.ay".to_string())) {
         Ok(ast) => println!("{:#?}", ast),
         Err(trace) => eprintln!("{}", trace),
     }
@@ -42,9 +40,7 @@ mod test {
             let entry = entry.path().to_str().unwrap().to_string();
             eprintln!("Running test {entry}");
 
-            let input = std::fs::read_to_string(entry).unwrap();
-
-            let res = parse(&input);
+            let res = parse(SourceCode::File(entry));
             if let Err(trace) = &res {
                 eprintln!("{trace}");
             }
