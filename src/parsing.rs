@@ -286,7 +286,6 @@ fn build_ast_from_statement(pair: Pair<Rule>) -> Result<Statement, Trace> {
             })
         }
         Rule::if_block => {
-            let mut children = pair.clone().into_inner();
             fields!(pair |> children: cond, then);
 
             let cond = build_ast_from_expr(cond)?;
@@ -313,6 +312,29 @@ fn build_ast_from_statement(pair: Pair<Rule>) -> Result<Statement, Trace> {
                     otherwise: vec![],
                 })
             }
+        }
+        Rule::loop_block => {
+            fields!(pair |> children);
+
+            let mut child = children.next().unwrap();
+
+            let (cond, body) = if children.peek().is_none() {
+                (
+                    None,
+                    handle_iter(&pair, &mut child.into_inner(), &build_ast_from_statement)?,
+                )
+            } else {
+                (
+                    Some(handle(&pair, child, &build_ast_from_expr)?),
+                    handle_iter(
+                        &pair,
+                        &mut children.next().unwrap().into_inner(),
+                        &build_ast_from_statement,
+                    )?,
+                )
+            };
+
+            Ok(Statement::Loop { cond, body })
         }
         Rule::statement => Ok(build_ast_from_statement(pair.into_inner().next().unwrap())?),
         rule => Err(Trace::new(
