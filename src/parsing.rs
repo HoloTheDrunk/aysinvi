@@ -11,7 +11,7 @@ use {
     strum_macros::EnumString,
 };
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub enum SourceCode {
     File(String),
     Content(String),
@@ -158,14 +158,10 @@ fn build_ast_from_expr(pair: Pair<Rule>) -> Result<Expr, Trace> {
             let left = handle(&pair, left, &build_ast_from_expr)?;
             let right = handle(&pair, right, &build_ast_from_expr)?;
             let operator = ComparisonOperator::from_str(comparison.as_str()).map_err(|_| {
-                Trace::new(
+                Trace::new_from_message(
                     Stage::Parsing,
-                    Error::new_from_span(
-                        ErrorVariant::CustomError {
-                            message: format!("Unimplemented comparison operator: `{comparison}`"),
-                        },
-                        pair.as_span(),
-                    ),
+                    &pair,
+                    format!("Unimplemented comparison operator: `{comparison}`"),
                 )
             })?;
 

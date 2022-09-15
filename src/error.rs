@@ -14,7 +14,7 @@ pub enum Stage {
     Compiling,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Trace {
     stack: Vec<(Stage, Error<Rule>)>,
 }
@@ -48,6 +48,25 @@ impl Trace {
         Trace {
             stack: vec![(stage, err)],
         }
+    }
+
+    pub fn new_from_message(stage: Stage, pair: &Pair<Rule>, message: String) -> Self {
+        let mut res = Trace::default();
+        res.push_message(stage, pair, message);
+        res
+    }
+}
+
+impl Trace {
+    pub fn push(&mut self, stage: Stage, err: Error<Rule>) {
+        self.stack.push((stage, err))
+    }
+
+    pub fn push_message(&mut self, stage: Stage, pair: &Pair<Rule>, message: String) {
+        self.stack.push((
+            stage,
+            Error::new_from_span(ErrorVariant::CustomError { message }, pair.as_span()),
+        ))
     }
 }
 
@@ -109,11 +128,5 @@ impl std::fmt::Display for Trace {
                 })
                 .collect::<String>(),
         )
-    }
-}
-
-impl Trace {
-    pub fn push(&mut self, stage: Stage, err: Error<Rule>) {
-        self.stack.push((stage, err))
     }
 }

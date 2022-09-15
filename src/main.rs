@@ -2,6 +2,7 @@
 
 mod error;
 mod parsing;
+mod binding;
 
 extern crate pest;
 #[macro_use]
@@ -16,7 +17,7 @@ use pest::{
 };
 
 fn main() {
-    match parse(SourceCode::File("examples/mod.ay".to_string())) {
+    match parse(SourceCode::File("./examples/mod.ay".to_string())) {
         Ok(ast) => println!("{:#?}", ast),
         Err(trace) => eprintln!("{}", trace),
     }
@@ -26,7 +27,7 @@ fn main() {
 mod test {
     use super::*;
 
-    const TEST_FOLDER: &str = "examples/features";
+    const TEST_FOLDER: &str = "./examples/features";
 
     fn run_tests<F>(path: &str, check: F)
     where
