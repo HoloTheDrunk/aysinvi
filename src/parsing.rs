@@ -86,7 +86,7 @@ where
 {
     let (span, rule) = (parent.as_span(), parent.as_rule());
     pred(pair).map_err(|mut trace| {
-        trace.push(
+        trace.push::<PestError>(
             Stage::Parsing,
             Error::new_from_span(
                 ErrorVariant::ParsingError {
@@ -94,7 +94,8 @@ where
                     negatives: vec![],
                 },
                 span,
-            ),
+            )
+            .into(),
         );
         trace
     })
@@ -116,14 +117,16 @@ macro_rules! fields {
             $(
                 let $field = $children
                     .next()
-                    .ok_or_else(|| Trace::new(
+                    .ok_or_else(|| Trace::new::<PestError>(
                         Stage::Parsing,
                         Error::new_from_span(
                             ErrorVariant::ParsingError {
                                 positives: vec![$pair.as_rule()],
                                 negatives: vec![]
                             },
-                            $pair.as_span())))?;
+                            $pair.as_span()
+                        ).into()
+                    ))?;
             )*
         )?
     };
@@ -179,14 +182,15 @@ fn build_ast_from_expr(pair: Pair<Rule>) -> Result<Expr, Trace> {
             // Bit unnecessary but better be safe than sorry
             let mult = if let Some(mult) = elems.next() {
                 Multiplier::from_str(mult).map_err(|_| {
-                    Trace::new(
+                    Trace::new::<PestError>(
                         Stage::Parsing,
                         Error::new_from_span(
                             ErrorVariant::CustomError {
                                 message: format!("Unimplemented multiplier: `{mult}`"),
                             },
                             span,
-                        ),
+                        )
+                        .into(),
                     )
                 })? as i64
             } else {
@@ -194,7 +198,7 @@ fn build_ast_from_expr(pair: Pair<Rule>) -> Result<Expr, Trace> {
             };
 
             let result = i64::from_str_radix(number, 8).map_err(|_| {
-                Trace::new(
+                Trace::new::<PestError>(
                     Stage::Parsing,
                     Error::new_from_span(
                         ErrorVariant::ParsingError {
@@ -202,7 +206,8 @@ fn build_ast_from_expr(pair: Pair<Rule>) -> Result<Expr, Trace> {
                             negatives: vec![],
                         },
                         span,
-                    ),
+                    )
+                    .into(),
                 )
             })? * mult;
 
@@ -210,14 +215,15 @@ fn build_ast_from_expr(pair: Pair<Rule>) -> Result<Expr, Trace> {
         }
         Rule::string => Ok(Expr::String(pair.as_span().as_str().to_owned())),
         Rule::ident | Rule::fun_ident => Ok(Expr::Ident(pair.as_span().as_str().to_owned())),
-        rule => Err(Trace::new(
+        rule => Err(Trace::new::<PestError>(
             Stage::AstBuilding,
             Error::new_from_span(
                 ErrorVariant::CustomError {
                     message: format!("Missing expression-generating rule `{:?}` handling", rule),
                 },
                 pair.as_span(),
-            ),
+            )
+            .into(),
         )),
     }
 }
@@ -263,7 +269,7 @@ fn build_ast_from_statement(pair: Pair<Rule>) -> Result<Statement, Trace> {
             });
 
             if idents.len() != values.len() {
-                return Err(Trace::new(
+                return Err(Trace::new::<PestError>(
                     Stage::Parsing,
                     Error::new_from_span(
                         ErrorVariant::ParsingError {
@@ -271,7 +277,8 @@ fn build_ast_from_statement(pair: Pair<Rule>) -> Result<Statement, Trace> {
                             negatives: vec![],
                         },
                         span,
-                    ),
+                    )
+                    .into(),
                 ));
             }
 
@@ -339,14 +346,15 @@ fn build_ast_from_statement(pair: Pair<Rule>) -> Result<Statement, Trace> {
             Ok(Statement::Loop { cond, body })
         }
         Rule::statement => Ok(build_ast_from_statement(pair.into_inner().next().unwrap())?),
-        rule => Err(Trace::new(
+        rule => Err(Trace::new::<PestError>(
             Stage::AstBuilding,
             Error::new_from_span(
                 ErrorVariant::CustomError {
                     message: format!("Missing statement-generating rule `{:?}` handling", rule),
                 },
                 pair.as_span(),
-            ),
+            )
+            .into(),
         )),
     }
 }
@@ -363,7 +371,7 @@ pub fn parse(source: SourceCode) -> Result<Vec<Statement>, Trace> {
         SourceCode::Content(content) => (None, content),
     };
 
-    let pairs = AyParser::parse(Rule::program, content.as_ref())?;
+    let pairs = AyParser::parse(Rule::program, content.as_ref()).map_err(PestError::from)?;
 
     for pair in pairs.clone() {
         recursive_print(Some(&pair), 0);
@@ -397,14 +405,15 @@ pub fn parse(source: SourceCode) -> Result<Vec<Statement>, Trace> {
                     eprintln!("Using {path}");
                     ast.extend(parse(SourceCode::File(path.clone()))?);
                 } else {
-                    return Err(Trace::new(
+                    return Err(Trace::new::<PestError>(
                         Stage::AstBuilding,
                         Error::new_from_span(
                             ErrorVariant::CustomError {
                                 message: "Missing script directory information".to_owned(),
                             },
                             pair.as_span(),
-                        ),
+                        )
+                        .into(),
                     ));
                 }
             }
@@ -415,7 +424,8 @@ pub fn parse(source: SourceCode) -> Result<Vec<Statement>, Trace> {
                     message: format!("Unknown rule: {:?}", unknown_rule),
                 },
                 pair.as_span(),
-            ))?,
+            ))
+            .map_err(PestError::from)?,
         }
     }
 

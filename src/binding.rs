@@ -1,2 +1,1 @@
-use crate::parsing::{Expr, Statement, Multiplier, ComparisonOperator};
-
+use crate::parsing::{ComparisonOperator, Expr, Multiplier, Statement};

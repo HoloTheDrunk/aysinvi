@@ -1,8 +1,8 @@
 #![allow(unused)]
 
+mod binding;
 mod error;
 mod parsing;
-mod binding;
 
 extern crate pest;
 #[macro_use]
