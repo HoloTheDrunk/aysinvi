@@ -6,7 +6,7 @@ use {
     pest::{
         error::{Error, ErrorVariant},
         iterators::{Pair, Pairs},
-        Parser,
+        Parser, Span,
     },
     strum_macros::EnumString,
 };
@@ -20,6 +20,11 @@ pub enum SourceCode {
 #[derive(Parser)]
 #[grammar = "../pest/grammar.pest"]
 pub struct AyParser;
+
+pub enum AyNode<'s> {
+    Statement(Span<'s>, Statement),
+    Expr(Span<'s>, Expr),
+}
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Statement {
