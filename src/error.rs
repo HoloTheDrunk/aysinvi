@@ -22,7 +22,7 @@ pub struct Trace {
     stack: Vec<(Stage, Box<dyn TraceError>)>,
 }
 
-trait TraceError: Debug {
+pub trait TraceError: Debug {
     fn from_span(span: Span, message: &str) -> Self
     where
         Self: Sized;
@@ -73,7 +73,7 @@ impl Trace {
 }
 
 #[derive(Debug)]
-struct PestError {
+pub struct PestError {
     line_col: LineColLocation,
     line: String,
     message: String,
@@ -92,7 +92,7 @@ impl TraceError for PestError {
     }
 
     fn line_col(&self) -> LineColLocation {
-        self.line_col
+        self.line_col.clone()
     }
 
     fn line(&self) -> &str {
@@ -107,7 +107,7 @@ impl TraceError for PestError {
 impl From<Error<Rule>> for PestError {
     fn from(err: Error<Rule>) -> Self {
         Self {
-            line_col: err.line_col,
+            line_col: err.line_col.clone(),
             line: err.line().to_owned(),
             message: err.variant.message().to_string(),
         }
