@@ -21,11 +21,15 @@ pub enum SourceCode {
 #[grammar = "../pest/grammar.pest"]
 pub struct AyParser;
 
-pub enum AyNode<'s> {
-    Statement(Span<'s>, Statement),
-    Expr(Span<'s>, Expr),
+/// Node containing a `Span` of code and the corresponding AST
+pub struct AyNode<'span, Inner: Node> {
+    span: Span<'span>,
+    inner: Inner,
 }
 
+pub trait Node {}
+
+/// A statement is anything that cannot be expected to return a value.
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Statement {
     FunDec {
@@ -48,7 +52,9 @@ pub enum Statement {
         body: Vec<Statement>,
     },
 }
+impl Node for Statement {}
 
+/// An expression is anything that is or returns a value.
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Expr {
     FunCall {
@@ -68,6 +74,7 @@ pub enum Expr {
     Ident(String),
     Negated(Box<Expr>),
 }
+impl Node for Expr {}
 
 #[derive(Debug, EnumString)]
 #[repr(i64)]
