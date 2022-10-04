@@ -17,7 +17,7 @@ use pest::{
 };
 
 fn main() {
-    match parse(SourceCode::File("./examples/mod.ay".to_string())) {
+    match parse(&SourceCode::File("./examples/mod.ay".to_string())) {
         Ok(ast) => println!("{:#?}", ast),
         Err(trace) => eprintln!("{}", trace),
     }
@@ -31,7 +31,7 @@ mod test {
 
     fn run_tests<F>(path: &str, check: F)
     where
-        F: Fn(Result<Vec<Statement>, Trace>) -> bool,
+        F: Fn(Result<Vec<AyNode<Statement>>, Trace>) -> bool,
     {
         let folder = format!("{TEST_FOLDER}/{path}");
         let mut entries = std::fs::read_dir(folder.clone())
@@ -41,7 +41,7 @@ mod test {
             let entry = entry.path().to_str().unwrap().to_string();
             eprintln!("Running test {entry}");
 
-            let res = parse(SourceCode::File(entry));
+            let res = parse(&SourceCode::File(entry));
             if let Err(trace) = &res {
                 eprintln!("{trace}");
             }
