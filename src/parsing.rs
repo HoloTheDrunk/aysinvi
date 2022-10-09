@@ -1,4 +1,7 @@
-use crate::error::*;
+use crate::error::{
+    pest_error::PestError,
+    trace::{Stage, Trace},
+};
 
 use std::{path::Path, str::FromStr};
 
@@ -173,8 +176,7 @@ fn build_ast_from_expr(pair: Pair<Rule>) -> Result<Expr, Trace> {
             let left = handle(&pair, left, &build_ast_from_expr)?;
             let right = handle(&pair, right, &build_ast_from_expr)?;
             let operator = ComparisonOperator::from_str(comparison.as_str()).map_err(|_| {
-                Trace::new_from_message(
-                    Stage::Parsing,
+                Trace::new_from_pair(
                     &pair,
                     format!("Unimplemented comparison operator: `{comparison}`"),
                 )

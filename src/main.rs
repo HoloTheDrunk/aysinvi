@@ -8,7 +8,7 @@ extern crate pest;
 #[macro_use]
 extern crate pest_derive;
 
-use crate::{error::*, parsing::*};
+use crate::{error::trace::Trace, parsing::*};
 
 use pest::{
     error::{Error, ErrorVariant},
