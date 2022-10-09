@@ -446,18 +446,13 @@ pub fn parse(source: SourceCode) -> Result<Vec<Statement>, Trace> {
     Ok(ast)
 }
 
-pub fn recursive_print(cur: Option<&Pair<Rule>>, depth: u8) {
+pub fn recursive_print(cur: Option<&Pair<Rule>>, depth: usize) {
     if let Some(node) = cur {
         let rule = node.as_rule();
 
-        // TODO: simplify this using .repeat()
-        let indent = (0..depth)
-            .map(|_| "\x1b[32m|   \x1b[0m")
-            .collect::<String>();
-
         println!(
             "{}\x1b[1;33m{:?}\x1b[0m:'{}'",
-            indent,
+            format_args!("\x1b[31m{}\x1b[0m", "|   ".repeat(depth)),
             rule,
             node.as_span()
                 .as_str()
