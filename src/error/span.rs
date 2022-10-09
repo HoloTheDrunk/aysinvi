@@ -1,6 +1,6 @@
 use pest::error::LineColLocation;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Span {
     line: String,
     location: LineColLocation,
