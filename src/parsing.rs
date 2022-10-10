@@ -1,4 +1,8 @@
-use crate::error::*;
+use crate::error::{
+    pest_error::PestError,
+    span::Span,
+    trace::{Stage, Trace},
+};
 
 use std::{path::Path, str::FromStr};
 
@@ -21,48 +25,61 @@ pub enum SourceCode {
 #[grammar = "../pest/grammar.pest"]
 pub struct AyParser;
 
-#[derive(PartialEq, Eq, Debug, Clone)]
+/// Node containing a `Span` of code and the corresponding AST
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AyNode<Inner: Node> {
+    span: Span,
+    inner: Inner,
+}
+
+pub trait Node {}
+
+/// A statement is anything that cannot be expected to return a value.
+#[derive(PartialEq, Debug, Clone)]
 pub enum Statement {
     FunDec {
         name: String,
         args: Vec<String>,
-        body: Vec<Statement>,
+        body: Vec<AyNode<Statement>>,
     },
     VarDec {
         names: Vec<String>,
-        values: Vec<Expr>,
+        values: Vec<AyNode<Expr>>,
     },
-    Expr(Expr),
+    Expr(AyNode<Expr>),
     If {
-        cond: Expr,
-        then: Vec<Statement>,
-        otherwise: Vec<Statement>,
+        cond: AyNode<Expr>,
+        then: Vec<AyNode<Statement>>,
+        otherwise: Vec<AyNode<Statement>>,
     },
     Loop {
-        cond: Option<Expr>,
-        body: Vec<Statement>,
+        cond: Option<AyNode<Expr>>,
+        body: Vec<AyNode<Statement>>,
     },
 }
+impl Node for Statement {}
 
-#[derive(PartialEq, Eq, Debug, Clone)]
+/// An expression is anything that is or returns a value.
+#[derive(PartialEq, Debug, Clone)]
 pub enum Expr {
     FunCall {
         name: String,
-        args: Vec<Expr>,
+        args: Vec<AyNode<Expr>>,
     },
     Array {
-        items: Vec<Expr>,
+        items: Vec<AyNode<Expr>>,
     },
     Comparison {
-        left: Box<Expr>,
-        right: Box<Expr>,
+        left: Box<AyNode<Expr>>,
+        right: Box<AyNode<Expr>>,
         operator: ComparisonOperator,
     },
     Number(i64),
     String(String),
     Ident(String),
-    Negated(Box<Expr>),
+    Negated(Box<AyNode<Expr>>),
 }
+impl Node for Expr {}
 
 #[derive(Debug, EnumString)]
 #[repr(i64)]
@@ -80,9 +97,9 @@ pub enum ComparisonOperator {
 }
 
 /// Pushes new error onto stacktrace or returns pred(pair).
-fn handle<F, T>(parent: &Pair<Rule>, pair: Pair<Rule>, pred: &F) -> Result<T, Trace>
+fn handle<F, T: Node>(parent: &Pair<Rule>, pair: Pair<Rule>, pred: &F) -> Result<AyNode<T>, Trace>
 where
-    F: Fn(Pair<Rule>) -> Result<T, Trace>,
+    F: Fn(Pair<Rule>) -> Result<AyNode<T>, Trace>,
 {
     let (span, rule) = (parent.as_span(), parent.as_rule());
     pred(pair).map_err(|mut trace| {
@@ -101,12 +118,16 @@ where
     })
 }
 
-fn handle_iter<F, T>(parent: &Pair<Rule>, iter: &mut Pairs<Rule>, pred: &F) -> Result<Vec<T>, Trace>
+fn handle_iter<F, T: Node>(
+    parent: &Pair<Rule>,
+    iter: &mut Pairs<Rule>,
+    pred: &F,
+) -> Result<Vec<AyNode<T>>, Trace>
 where
-    F: Fn(Pair<Rule>) -> Result<T, Trace>,
+    F: Fn(Pair<Rule>) -> Result<AyNode<T>, Trace>,
 {
     iter.map(|item| handle(parent, item, pred))
-        .collect::<Result<Vec<T>, Trace>>()
+        .collect::<Result<Vec<AyNode<T>>, Trace>>()
 }
 
 macro_rules! fields {
@@ -132,46 +153,60 @@ macro_rules! fields {
     };
 }
 
-fn build_ast_from_expr(pair: Pair<Rule>) -> Result<Expr, Trace> {
+fn build_ast_from_expr(pair: Pair<Rule>) -> Result<AyNode<Expr>, Trace> {
     match pair.as_rule() {
         Rule::expr => build_ast_from_expr(pair.into_inner().next().unwrap()),
-        Rule::negation => Ok(Expr::Negated(Box::new(handle(
-            &pair.clone(),
-            pair.into_inner().next().unwrap(),
-            &build_ast_from_expr,
-        )?))),
+        Rule::negation => Ok(AyNode {
+            span: pair.as_span().into(),
+            inner: Expr::Negated(Box::new(handle(
+                &pair.clone(),
+                pair.into_inner().next().unwrap(),
+                &build_ast_from_expr,
+            )?)),
+        }),
         Rule::fun_call => {
+            let span = pair.as_span();
             fields!(pair |> children: name);
 
             let name = name.as_span().as_str().to_owned();
             let args = handle_iter(&pair, &mut children, &build_ast_from_expr)?;
 
-            Ok(Expr::FunCall { name, args })
+            Ok(AyNode {
+                span: span.into(),
+                inner: Expr::FunCall { name, args },
+            })
         }
         Rule::array => {
+            let span = pair.as_span();
             fields!(pair |> children: items);
 
             let items = handle_iter(&pair, &mut items.into_inner(), &build_ast_from_expr)?;
 
-            Ok(Expr::Array { items })
+            Ok(AyNode {
+                span: span.into(),
+                inner: Expr::Array { items },
+            })
         }
         Rule::comparison => {
+            let span = pair.as_span();
             fields!(pair |> children: left, right, comparison);
 
             let left = handle(&pair, left, &build_ast_from_expr)?;
             let right = handle(&pair, right, &build_ast_from_expr)?;
             let operator = ComparisonOperator::from_str(comparison.as_str()).map_err(|_| {
-                Trace::new_from_message(
-                    Stage::Parsing,
+                Trace::new_from_pair(
                     &pair,
                     format!("Unimplemented comparison operator: `{comparison}`"),
                 )
             })?;
 
-            Ok(Expr::Comparison {
-                left: Box::new(left),
-                right: Box::new(right),
-                operator,
+            Ok(AyNode {
+                span: span.into(),
+                inner: Expr::Comparison {
+                    left: Box::new(left),
+                    right: Box::new(right),
+                    operator,
+                },
             })
         }
         Rule::number => {
@@ -211,10 +246,19 @@ fn build_ast_from_expr(pair: Pair<Rule>) -> Result<Expr, Trace> {
                 )
             })? * mult;
 
-            Ok(Expr::Number(result))
+            Ok(AyNode {
+                span: span.into(),
+                inner: Expr::Number(result),
+            })
         }
-        Rule::string => Ok(Expr::String(pair.as_span().as_str().to_owned())),
-        Rule::ident | Rule::fun_ident => Ok(Expr::Ident(pair.as_span().as_str().to_owned())),
+        Rule::string => Ok(AyNode {
+            span: pair.as_span().into(),
+            inner: Expr::String(pair.as_span().as_str().to_owned()),
+        }),
+        Rule::ident | Rule::fun_ident => Ok(AyNode {
+            span: pair.as_span().into(),
+            inner: Expr::Ident(pair.as_span().as_str().to_owned()),
+        }),
         rule => Err(Trace::new::<PestError>(
             Stage::AstBuilding,
             Error::new_from_span(
@@ -228,13 +272,12 @@ fn build_ast_from_expr(pair: Pair<Rule>) -> Result<Expr, Trace> {
     }
 }
 
-fn build_ast_from_statement(pair: Pair<Rule>) -> Result<Statement, Trace> {
+fn build_ast_from_statement(pair: Pair<Rule>) -> Result<AyNode<Statement>, Trace> {
     match pair.as_rule() {
-        Rule::expr => Ok(Statement::Expr(handle(
-            &pair.clone(),
-            pair,
-            &build_ast_from_expr,
-        )?)),
+        Rule::expr => Ok(AyNode {
+            span: pair.as_span().into(),
+            inner: Statement::Expr(handle(&pair.clone(), pair, &build_ast_from_expr)?),
+        }),
         Rule::fun_dec => {
             let span = pair.as_span();
 
@@ -252,7 +295,10 @@ fn build_ast_from_statement(pair: Pair<Rule>) -> Result<Statement, Trace> {
                 handle_iter(&pair, &mut body.into_inner(), &build_ast_from_statement)
             })?;
 
-            Ok(Statement::FunDec { name, args, body })
+            Ok(AyNode {
+                span: span.into(),
+                inner: Statement::FunDec { name, args, body },
+            })
         }
         Rule::var_dec => {
             let span = pair.as_span();
@@ -282,19 +328,23 @@ fn build_ast_from_statement(pair: Pair<Rule>) -> Result<Statement, Trace> {
                 ));
             }
 
-            Ok(Statement::VarDec {
-                names: idents
-                    .iter()
-                    .map(|ident| ident.as_span().as_str().to_owned())
-                    .collect(),
+            Ok(AyNode {
+                span: span.into(),
+                inner: Statement::VarDec {
+                    names: idents
+                        .iter()
+                        .map(|ident| ident.as_span().as_str().to_owned())
+                        .collect(),
 
-                values: values
-                    .iter()
-                    .map(|value| build_ast_from_expr(value.clone()))
-                    .collect::<Result<Vec<Expr>, Trace>>()?,
+                    values: values
+                        .iter()
+                        .map(|value| build_ast_from_expr(value.clone()))
+                        .collect::<Result<Vec<AyNode<Expr>>, Trace>>()?,
+                },
             })
         }
         Rule::if_block => {
+            let span = pair.as_span();
             fields!(pair |> children: cond, then);
 
             let cond = build_ast_from_expr(cond)?;
@@ -309,20 +359,27 @@ fn build_ast_from_statement(pair: Pair<Rule>) -> Result<Statement, Trace> {
                     &build_ast_from_statement,
                 )?;
 
-                Ok(Statement::If {
-                    cond,
-                    then,
-                    otherwise,
+                Ok(AyNode {
+                    span: span.into(),
+                    inner: Statement::If {
+                        cond,
+                        then,
+                        otherwise,
+                    },
                 })
             } else {
-                Ok(Statement::If {
-                    cond,
-                    then,
-                    otherwise: vec![],
+                Ok(AyNode {
+                    span: pair.as_span().into(),
+                    inner: Statement::If {
+                        cond,
+                        then,
+                        otherwise: vec![],
+                    },
                 })
             }
         }
         Rule::loop_block => {
+            let span = pair.as_span();
             fields!(pair |> children);
 
             let mut child = children.next().unwrap();
@@ -343,7 +400,10 @@ fn build_ast_from_statement(pair: Pair<Rule>) -> Result<Statement, Trace> {
                 )
             };
 
-            Ok(Statement::Loop { cond, body })
+            Ok(AyNode {
+                span: span.into(),
+                inner: Statement::Loop { cond, body },
+            })
         }
         Rule::statement => Ok(build_ast_from_statement(pair.into_inner().next().unwrap())?),
         rule => Err(Trace::new::<PestError>(
@@ -359,8 +419,8 @@ fn build_ast_from_statement(pair: Pair<Rule>) -> Result<Statement, Trace> {
     }
 }
 
-pub fn parse(source: SourceCode) -> Result<Vec<Statement>, Trace> {
-    let mut ast: Vec<Statement> = vec![];
+pub fn parse(source: SourceCode) -> Result<Vec<AyNode<Statement>>, Trace> {
+    let mut ast: Vec<AyNode<Statement>> = vec![];
 
     let (mut path, content) = match source {
         SourceCode::File(path) => {
@@ -432,18 +492,13 @@ pub fn parse(source: SourceCode) -> Result<Vec<Statement>, Trace> {
     Ok(ast)
 }
 
-pub fn recursive_print(cur: Option<&Pair<Rule>>, depth: u8) {
+pub fn recursive_print(cur: Option<&Pair<Rule>>, depth: usize) {
     if let Some(node) = cur {
         let rule = node.as_rule();
 
-        // TODO: simplify this using .repeat()
-        let indent = (0..depth)
-            .map(|_| "\x1b[32m|   \x1b[0m")
-            .collect::<String>();
-
         println!(
             "{}\x1b[1;33m{:?}\x1b[0m:'{}'",
-            indent,
+            format_args!("\x1b[31m{}\x1b[0m", "|   ".repeat(depth)),
             rule,
             node.as_span()
                 .as_str()
