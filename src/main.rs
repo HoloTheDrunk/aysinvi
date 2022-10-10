@@ -31,7 +31,7 @@ mod test {
 
     fn run_tests<F>(path: &str, check: F)
     where
-        F: Fn(Result<Vec<Statement>, Trace>) -> bool,
+        F: Fn(Result<Vec<AyNode<Statement>>, Trace>) -> bool,
     {
         let folder = format!("{TEST_FOLDER}/{path}");
         let mut entries = std::fs::read_dir(folder.clone())
