@@ -28,8 +28,8 @@ pub struct AyParser;
 /// Node containing a `Span` of code and the corresponding AST
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AyNode<Inner: Node> {
-    span: Span,
-    inner: Inner,
+    pub span: Span,
+    pub inner: Inner,
 }
 
 pub trait Node {}
