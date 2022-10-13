@@ -17,6 +17,13 @@ pub struct FunDec {
 }
 
 #[derive(PartialEq, Debug, Clone)]
+pub enum Tense {
+    Present,
+    Imminent,
+    Future,
+}
+
+#[derive(PartialEq, Debug, Clone)]
 pub struct VarDec {
     names: Vec<String>,
     values: Vec<AyNode<Expr>>,
@@ -44,6 +51,7 @@ impl Node for Statement {}
 #[derive(PartialEq, Debug, Clone)]
 pub enum Expr {
     FunCall {
+        tense: Tense,
         def: Rc<FunDec>,
         name: String,
         args: Vec<AyNode<Expr>>,
@@ -83,6 +91,20 @@ macro_rules! convert {
     };
 }
 
+macro_rules! wrap_layer {
+    ($($scoped_map:ident),* | $actions:block) => {
+        {
+            $( $scoped_map.push_layer(); )*
+
+            let res = $actions;
+
+            $( $scoped_map.pop_layer(); )*
+
+            res
+        }
+    };
+}
+
 fn convert_statement(
     AyNode { span, inner }: &AyNode<PStatement>,
     mut vars: &mut ScopeMap<String, Rc<VarDec>>,
@@ -108,7 +130,7 @@ fn convert_statement(
             let fun_dec = Rc::new(FunDec {
                 name: name.clone(),
                 args: args.clone(),
-                body: convert!(statement body | vars funs),
+                body: wrap_layer!(vars, funs | { convert!(statement body | vars funs) }),
             });
 
             funs.define(name.clone(), fun_dec.clone());
@@ -126,15 +148,15 @@ fn convert_statement(
             span: span.clone(),
             inner: Statement::If {
                 cond: convert_expr(cond, vars, funs),
-                then: convert!(statement then | vars funs),
-                otherwise: convert!(statement otherwise | vars funs),
+                then: wrap_layer!(vars, funs | { convert!(statement then | vars funs) }),
+                otherwise: wrap_layer!(vars, funs | { convert!(statement otherwise | vars funs) }),
             },
         },
         PStatement::Loop { cond, body } => AyNode {
             span: span.clone(),
             inner: Statement::Loop {
                 cond: cond.clone().map(|cond| convert_expr(&cond, vars, funs)),
-                body: convert!(statement body | vars funs),
+                body: wrap_layer!(vars, funs | { convert!(statement body | vars funs) }),
             },
         },
         PStatement::Expr(expr) => AyNode {
@@ -149,5 +171,49 @@ fn convert_expr(
     mut vars: &mut ScopeMap<String, Rc<VarDec>>,
     mut funs: &mut ScopeMap<String, Rc<FunDec>>,
 ) -> AyNode<Expr> {
+    match inner {
+        PExpr::Ident(name) => {
+            if let Some(rc) = vars.get(name) {
+                AyNode {
+                    span: span.clone(),
+                    inner: Expr::Var(rc.clone()),
+                }
+            } else {
+                // FIXME: Error
+                todo!()
+            }
+        }
+        PExpr::FunCall { name, args } => {
+            if let Some(rc) = match_function(name, funs) {
+                todo!()
+            } else {
+                // FIXME: Error
+                todo!()
+            }
+        }
+        _ => todo!(),
+    };
     todo!("{span:?}")
+}
+
+fn match_function(name: &str, funs: &ScopeMap<String, Rc<FunDec>>) -> Option<(Tense, Rc<FunDec>)> {
+    funs.iter().find_map(|(key, fun)| {
+        if key.contains('.') {
+            let (left, right) = key.split_once('.').unwrap();
+            if format!("{left}{right}") == name {
+                Some((Tense::Present, fun))
+            } else if format!("{left}ìy{right}") == name {
+                Some((Tense::Imminent, fun))
+            } else if format!("{left}ay{right}") == name {
+                Some((Tense::Future, fun))
+            } else {
+                // FIXME: Error
+                todo!()
+            }
+        } else {
+            todo!()
+        }
+    });
+
+    todo!()
 }
