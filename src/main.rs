@@ -21,7 +21,10 @@ fn main() -> Result<(), Trace> {
     println!("\x1b[1mAST\x1b[0m\n{ast:?}");
 
     let bound = binding::convert(&ast);
-    println!("\x1b[1mBOUND\x1b[0m\n{:?}", bound.collect::<Vec<AyNode<binding::Statement>>>());
+    println!(
+        "\x1b[1mBOUND\x1b[0m\n{:?}",
+        bound.collect::<Vec<AyNode<binding::Statement>>>()
+    );
 
     Ok(())
 }
