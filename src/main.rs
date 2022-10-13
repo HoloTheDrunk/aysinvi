@@ -16,11 +16,14 @@ use pest::{
     Parser,
 };
 
-fn main() {
-    match parse(SourceCode::File("./examples/mod.ay".to_string())) {
-        Ok(ast) => println!("{:#?}", ast),
-        Err(trace) => eprintln!("{}", trace),
-    }
+fn main() -> Result<(), Trace> {
+    let ast = parse(SourceCode::File("./examples/mod.ay".to_string()))?;
+    println!("\x1b[1mAST\x1b[0m\n{ast:?}");
+
+    let bound = binding::convert(&ast);
+    println!("\x1b[1mBOUND\x1b[0m\n{:?}", bound.collect::<Vec<AyNode<binding::Statement>>>());
+
+    Ok(())
 }
 
 #[cfg(test)]
