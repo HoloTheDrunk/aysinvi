@@ -20,11 +20,10 @@ fn main() -> Result<(), Trace> {
     macro_rules! print_ast {
         ($ast:ident) => {
             println!("\x1b[1m{}\x1b[0m", stringify!($ast));
-            if let Err(ref trace) = $ast {
-                println!("{trace}");
-            } else {
-                println!("{:?}", $ast);
-            }
+            match $ast {
+                Ok(ref ast) => println!("{ast:?}"),
+                Err(ref trace) => println!("{trace}"),
+            };
         };
     }
 
