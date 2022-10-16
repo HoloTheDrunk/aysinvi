@@ -2,16 +2,16 @@ use super::{span::Span, trace::TraceError};
 
 use crate::parsing::Rule;
 
-use pest::error::{Error, LineColLocation};
+use pest::error::LineColLocation;
 
 #[derive(Debug)]
-pub struct PestError {
+pub struct Error {
     line_col: LineColLocation,
     line: String,
     message: String,
 }
 
-impl TraceError for PestError {
+impl TraceError for Error {
     fn from_span(span: Span, message: &str) -> Self
     where
         Self: Sized,
@@ -36,8 +36,8 @@ impl TraceError for PestError {
     }
 }
 
-impl From<Error<Rule>> for PestError {
-    fn from(err: Error<Rule>) -> Self {
+impl From<pest::error::Error<Rule>> for Error {
+    fn from(err: pest::error::Error<Rule>) -> Self {
         Self {
             line_col: err.line_col.clone(),
             line: err.line().to_owned(),

@@ -1,5 +1,5 @@
 use crate::error::{
-    pest_error::PestError,
+    error::Error,
     span::Span,
     trace::{Stage, Trace},
 };
@@ -8,7 +8,7 @@ use std::{path::Path, str::FromStr};
 
 use {
     pest::{
-        error::{Error, ErrorVariant},
+        error::{Error as PestError, ErrorVariant},
         iterators::{Pair, Pairs},
         Parser,
     },
@@ -103,9 +103,9 @@ where
 {
     let (span, rule) = (parent.as_span(), parent.as_rule());
     pred(pair).map_err(|mut trace| {
-        trace.push::<PestError>(
+        trace.push::<Error>(
             Stage::Parsing,
-            Error::new_from_span(
+            PestError::new_from_span(
                 ErrorVariant::ParsingError {
                     positives: vec![rule],
                     negatives: vec![],
@@ -138,9 +138,9 @@ macro_rules! fields {
             $(
                 let $field = $children
                     .next()
-                    .ok_or_else(|| Trace::new::<PestError>(
+                    .ok_or_else(|| Trace::new::<Error>(
                         Stage::Parsing,
-                        Error::new_from_span(
+                        PestError::new_from_span(
                             ErrorVariant::ParsingError {
                                 positives: vec![$pair.as_rule()],
                                 negatives: vec![]
@@ -217,9 +217,9 @@ fn build_ast_from_expr(pair: Pair<Rule>) -> Result<AyNode<Expr>, Trace> {
             // Bit unnecessary but better be safe than sorry
             let mult = if let Some(mult) = elems.next() {
                 Multiplier::from_str(mult).map_err(|_| {
-                    Trace::new::<PestError>(
+                    Trace::new::<Error>(
                         Stage::Parsing,
-                        Error::new_from_span(
+                        PestError::new_from_span(
                             ErrorVariant::CustomError {
                                 message: format!("Unimplemented multiplier: `{mult}`"),
                             },
@@ -233,9 +233,9 @@ fn build_ast_from_expr(pair: Pair<Rule>) -> Result<AyNode<Expr>, Trace> {
             };
 
             let result = i64::from_str_radix(number, 8).map_err(|_| {
-                Trace::new::<PestError>(
+                Trace::new::<Error>(
                     Stage::Parsing,
-                    Error::new_from_span(
+                    PestError::new_from_span(
                         ErrorVariant::ParsingError {
                             positives: vec![Rule::number],
                             negatives: vec![],
@@ -259,9 +259,9 @@ fn build_ast_from_expr(pair: Pair<Rule>) -> Result<AyNode<Expr>, Trace> {
             span: pair.as_span().into(),
             inner: Expr::Ident(pair.as_span().as_str().to_owned()),
         }),
-        rule => Err(Trace::new::<PestError>(
+        rule => Err(Trace::new::<Error>(
             Stage::AstBuilding,
-            Error::new_from_span(
+            PestError::new_from_span(
                 ErrorVariant::CustomError {
                     message: format!("Missing expression-generating rule `{:?}` handling", rule),
                 },
@@ -315,9 +315,9 @@ fn build_ast_from_statement(pair: Pair<Rule>) -> Result<AyNode<Statement>, Trace
             });
 
             if idents.len() != values.len() {
-                return Err(Trace::new::<PestError>(
+                return Err(Trace::new::<Error>(
                     Stage::Parsing,
-                    Error::new_from_span(
+                    PestError::new_from_span(
                         ErrorVariant::ParsingError {
                             positives: vec![Rule::var_dec],
                             negatives: vec![],
@@ -406,9 +406,9 @@ fn build_ast_from_statement(pair: Pair<Rule>) -> Result<AyNode<Statement>, Trace
             })
         }
         Rule::statement => Ok(build_ast_from_statement(pair.into_inner().next().unwrap())?),
-        rule => Err(Trace::new::<PestError>(
+        rule => Err(Trace::new::<Error>(
             Stage::AstBuilding,
-            Error::new_from_span(
+            PestError::new_from_span(
                 ErrorVariant::CustomError {
                     message: format!("Missing statement-generating rule `{:?}` handling", rule),
                 },
@@ -431,7 +431,7 @@ pub fn parse(source: SourceCode) -> Result<Vec<AyNode<Statement>>, Trace> {
         SourceCode::Content(content) => (None, content),
     };
 
-    let pairs = AyParser::parse(Rule::program, content.as_ref()).map_err(PestError::from)?;
+    let pairs = AyParser::parse(Rule::program, content.as_ref()).map_err(Error::from)?;
 
     for pair in pairs.clone() {
         recursive_print(Some(&pair), 0);
@@ -465,9 +465,9 @@ pub fn parse(source: SourceCode) -> Result<Vec<AyNode<Statement>>, Trace> {
                     eprintln!("Using {path}");
                     ast.extend(parse(SourceCode::File(path.clone()))?);
                 } else {
-                    return Err(Trace::new::<PestError>(
+                    return Err(Trace::new::<Error>(
                         Stage::AstBuilding,
-                        Error::new_from_span(
+                        PestError::new_from_span(
                             ErrorVariant::CustomError {
                                 message: "Missing script directory information".to_owned(),
                             },
@@ -479,13 +479,13 @@ pub fn parse(source: SourceCode) -> Result<Vec<AyNode<Statement>>, Trace> {
             }
             Rule::statement => ast.push(build_ast_from_statement(pair)?),
             Rule::EOI => {}
-            unknown_rule => Err(Error::new_from_span(
+            unknown_rule => Err(PestError::new_from_span(
                 ErrorVariant::CustomError {
                     message: format!("Unknown rule: {:?}", unknown_rule),
                 },
                 pair.as_span(),
             ))
-            .map_err(PestError::from)?,
+            .map_err(Error::from)?,
         }
     }
 

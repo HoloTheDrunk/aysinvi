@@ -1,9 +1,9 @@
-use super::{pest_error::PestError, span::Span};
+use super::{error::Error, span::Span};
 
 use crate::parsing::*;
 
 use pest::{
-    error::{Error, ErrorVariant, LineColLocation},
+    error::{Error as PestError, ErrorVariant, LineColLocation},
     iterators::{Pair, Pairs},
 };
 
@@ -14,6 +14,7 @@ pub enum Stage {
     Unknown,
     Parsing,
     AstBuilding,
+    Binding,
     Typing,
     Compiling,
 }
@@ -68,10 +69,7 @@ impl Trace {
     pub fn push_pest_error(&mut self, stage: Stage, pair: &Pair<Rule>, message: String) {
         self.stack.push((
             stage,
-            Box::new(PestError::from_span(
-                pair.as_span().into(),
-                message.as_ref(),
-            )),
+            Box::new(Error::from_span(pair.as_span().into(), message.as_ref())),
         ))
     }
 }
