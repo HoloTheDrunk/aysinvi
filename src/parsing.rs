@@ -285,15 +285,22 @@ fn build_ast_from_statement(pair: Pair<Rule>) -> Result<AyNode<Statement>, Trace
 
             let name = name.as_span().as_str().to_owned();
 
-            let args = children.next().map_or(vec![], |args| {
-                args.into_inner()
-                    .map(|arg| arg.as_span().as_str().to_owned())
-                    .collect::<Vec<String>>()
-            });
+            let args = children.next();
+            let body = children.next();
 
-            let body = children.next().map_or(Ok(vec![]), |body| {
-                handle_iter(&pair, &mut body.into_inner(), &build_ast_from_statement)
-            })?;
+            let (args, body) = match (args, body) {
+                (Some(args), Some(body)) => (
+                    args.into_inner()
+                        .map(|arg| arg.as_span().as_str().to_owned())
+                        .collect::<Vec<String>>(),
+                    handle_iter(&pair, &mut body.into_inner(), &build_ast_from_statement)?,
+                ),
+                (Some(body), None) => (
+                    vec![],
+                    handle_iter(&pair, &mut body.into_inner(), &build_ast_from_statement)?,
+                ),
+                _ => (vec![], vec![]),
+            };
 
             Ok(AyNode {
                 span: span.into(),
