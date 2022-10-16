@@ -27,7 +27,7 @@ fn main() -> Result<(), Trace> {
         };
     }
 
-    let ast = parse(SourceCode::File("./examples/funcall.ay".to_string()));
+    let ast = parse(SourceCode::File("./examples/funargs.ay".to_string()));
     print_ast!(ast);
 
     let bound = binding::convert(&ast?);

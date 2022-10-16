@@ -27,7 +27,7 @@ pub enum Tense {
     Future,
 }
 
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Default, Clone)]
 pub struct VarDec {
     names: Vec<String>,
     values: Vec<AyNode<Expr>>,
@@ -135,7 +135,15 @@ fn convert_statement(
             let fun_dec = Rc::new(FunDec {
                 name: name.clone(),
                 args: args.clone(),
-                body: wrap_scope!(vars, funs | { convert!(statement body | vars funs)? }),
+                body: wrap_scope!(
+                    vars,
+                    funs | {
+                        args.iter()
+                            .for_each(|arg| vars.define(arg.clone(), Rc::new(VarDec::default())));
+
+                        convert!(statement body | vars funs)?
+                    }
+                ),
             });
 
             funs.define(name.clone(), fun_dec.clone());

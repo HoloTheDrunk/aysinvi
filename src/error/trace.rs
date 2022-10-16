@@ -101,12 +101,14 @@ impl std::fmt::Display for Trace {
                     };
 
                     let underline = match err.line_col() {
-                        LineColLocation::Pos((_, x)) => " ^".to_owned(),
+                        LineColLocation::Pos((_, x)) => "^".to_owned(),
                         LineColLocation::Span((ys, xs), (ye, xe)) => {
-                            if ys == ye {
-                                format!(" ^{}^", "-".repeat(xe - xs - 2))
+                            if ys == ye && xe - xs > 1 {
+                                format!("^{}^", "-".repeat(xe - xs - 2))
+                            } else if xe - xs > 1 {
+                                format!("^{}", "-".repeat(err.line().len() - xs))
                             } else {
-                                format!(" ^{}", "-".repeat(err.line().len() - xs))
+                                "^".to_owned()
                             }
                         }
                     };
@@ -119,11 +121,11 @@ impl std::fmt::Display for Trace {
                     format!(
                         "{arrow} {stage:?} | {coords}\n\
                          {padding}|\n\
-                         {}\n\
-                         {padding}|{underline}\n\
+                         {line_nbr}| {}\n\
+                         {padding}| {underline}\n\
                          {padding}= {}\n",
                         // Line number and line
-                        format_args!("{}| {}", line_nbr, err.line()),
+                        err.line(),
                         // Error
                         err.message()
                     )
