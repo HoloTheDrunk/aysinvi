@@ -199,7 +199,36 @@ fn convert_expr(
             },
             None => todo!(),
         },
-        _ => todo!(),
+        PExpr::Number(num) => AyNode {
+            span: span.clone(),
+            inner: Expr::Number(*num),
+        },
+        PExpr::String(string) => AyNode {
+            span: span.clone(),
+            inner: Expr::String(string.clone()),
+        },
+        PExpr::Negated(expr) => AyNode {
+            span: span.clone(),
+            inner: Expr::Negated(Box::new(convert_expr(expr, vars, funs))),
+        },
+        PExpr::Comparison {
+            left,
+            right,
+            operator,
+        } => AyNode {
+            span: span.clone(),
+            inner: Expr::Comparison {
+                left: Box::new(convert_expr(left, vars, funs)),
+                right: Box::new(convert_expr(right, vars, funs)),
+                operator: operator.clone(),
+            },
+        },
+        PExpr::Array { items } => AyNode {
+            span: span.clone(),
+            inner: Expr::Array {
+                items: convert!(expr items | vars funs),
+            },
+        },
     };
     todo!("{span:?}")
 }
@@ -229,16 +258,17 @@ mod test {
     use super::*;
 
     #[test]
+    /// Test:
+    /// ````
+    /// fn scope {
+    ///    fn t.aron {}
+    ///    taron()   // valid
+    ///    tìyaron() // valid
+    ///    tayaron() // valid
+    /// }
+    /// taron() -- invalid
+    /// ````
     fn test_match_function() {
-        // Test:
-        // fn scope {
-        //    fn t.aron {}
-        //    taron()   -- valid
-        //    tìyaron() -- valid
-        //    tayaron() -- valid
-        // }
-        // taron() -- invalid
-
         let mut funs = ScopeMap::<String, Rc<FunDec>>::new();
 
         wrap_scope!(
