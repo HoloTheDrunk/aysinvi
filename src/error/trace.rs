@@ -1,4 +1,4 @@
-use super::{error::Error, span::Span};
+use super::{span::Span, trace_error::Error};
 
 use crate::parsing::*;
 

@@ -1,8 +1,8 @@
 use crate::{
     error::{
-        error::Error,
         span::Span,
         trace::{Stage, Trace, TraceError},
+        trace_error::Error,
     },
     parsing::{
         AyNode, ComparisonOperator, Expr as PExpr, Multiplier, Node, Statement as PStatement,
@@ -13,28 +13,28 @@ use {paste::paste, pest::error::LineColLocation, quickscope::ScopeMap};
 
 use std::rc::Rc;
 
-#[derive(PartialEq, Default, Debug, Clone)]
+#[derive(PartialEq, Eq, Default, Debug, Clone)]
 pub struct FunDec {
     name: String,
     args: Vec<String>,
     body: Vec<AyNode<Statement>>,
 }
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Tense {
     Present,
     Imminent,
     Future,
 }
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct VarDec {
     names: Vec<String>,
     values: Vec<AyNode<Expr>>,
 }
 
 /// A statement is anything that cannot be expected to return a value.
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Statement {
     FunDec(Rc<FunDec>),
     VarDec(Rc<VarDec>),
@@ -52,7 +52,7 @@ pub enum Statement {
 impl Node for Statement {}
 
 /// An expression is anything that is or returns a value.
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Expr {
     FunCall {
         tense: Tense,
@@ -201,7 +201,7 @@ fn convert_expr(
                 span: span.clone(),
                 inner: Expr::FunCall {
                     tense,
-                    dec: fun_dec.clone(),
+                    dec: fun_dec,
                     name: name.clone(),
                     args: convert!(expr args | vars funs)?,
                 },
@@ -253,8 +253,8 @@ fn closest<T>(scope_map: &ScopeMap<String, T>, name: &str) -> String {
         .map(|key| (key, distance::levenshtein(name, key)))
         .min_by(|(_, d1), (_, d2)| usize::cmp(d1, d2))
         .filter(|(key, dist)| *dist * 2 < key.len())
-        .and_then(|(key, _)| Some(format!(". Maybe you meant: '{}'?", key.replace(".", ""))))
-        .unwrap_or("".to_owned())
+        .map(|(key, _)| format!(". Maybe you meant: '{}'?", key.replace('.', "")))
+        .unwrap_or_else(|| "".to_owned())
 }
 
 fn match_function(name: &str, funs: &ScopeMap<String, Rc<FunDec>>) -> Option<(Tense, Rc<FunDec>)> {

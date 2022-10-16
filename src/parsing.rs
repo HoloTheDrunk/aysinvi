@@ -1,7 +1,7 @@
 use crate::error::{
-    error::Error,
     span::Span,
     trace::{Stage, Trace},
+    trace_error::Error,
 };
 
 use std::{path::Path, str::FromStr};
