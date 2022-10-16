@@ -75,12 +75,13 @@ pub enum Expr {
 }
 impl Node for Expr {}
 
-pub fn convert(mut ast: &Vec<AyNode<PStatement>>) -> impl Iterator<Item = AyNode<Statement>> + '_ {
+pub fn convert(mut ast: &Vec<AyNode<PStatement>>) -> Result<Vec<AyNode<Statement>>, Trace> {
     let mut vars = ScopeMap::<String, Rc<VarDec>>::new();
     let mut funs = ScopeMap::<String, Rc<FunDec>>::new();
 
     ast.iter()
         .map(move |node| convert_statement(node, &mut vars, &mut funs))
+        .collect::<Result<Vec<AyNode<Statement>>, Trace>>()
 }
 
 // This might be retarded lol
@@ -90,7 +91,7 @@ macro_rules! convert {
             $field
                 .iter()
                 .map(|node| [<convert_ $stex>](node, $vars, $funs))
-                .collect()
+                .collect::<Result<Vec<AyNode<_>>, Trace>>()
         }
     };
 }
@@ -113,60 +114,63 @@ fn convert_statement(
     AyNode { span, inner }: &AyNode<PStatement>,
     mut vars: &mut ScopeMap<String, Rc<VarDec>>,
     mut funs: &mut ScopeMap<String, Rc<FunDec>>,
-) -> AyNode<Statement> {
+) -> Result<AyNode<Statement>, Trace> {
     match inner {
         PStatement::VarDec { names, values } => {
             let var_dec = Rc::new(VarDec {
                 names: names.clone(),
-                values: convert!(expr values | vars funs),
+                values: convert!(expr values | vars funs)?,
             });
 
             names
                 .iter()
                 .for_each(|name| vars.define(name.clone(), var_dec.clone()));
 
-            AyNode {
+            Ok(AyNode {
                 span: span.clone(),
                 inner: Statement::VarDec(var_dec),
-            }
+            })
         }
         PStatement::FunDec { name, args, body } => {
             let fun_dec = Rc::new(FunDec {
                 name: name.clone(),
                 args: args.clone(),
-                body: wrap_scope!(vars, funs | { convert!(statement body | vars funs) }),
+                body: wrap_scope!(vars, funs | { convert!(statement body | vars funs)? }),
             });
 
             funs.define(name.clone(), fun_dec.clone());
 
-            AyNode {
+            Ok(AyNode {
                 span: span.clone(),
                 inner: Statement::FunDec(fun_dec),
-            }
+            })
         }
         PStatement::If {
             cond,
             then,
             otherwise,
-        } => AyNode {
+        } => Ok(AyNode {
             span: span.clone(),
             inner: Statement::If {
-                cond: convert_expr(cond, vars, funs),
-                then: wrap_scope!(vars, funs | { convert!(statement then | vars funs) }),
-                otherwise: wrap_scope!(vars, funs | { convert!(statement otherwise | vars funs) }),
+                cond: convert_expr(cond, vars, funs)?,
+                then: wrap_scope!(vars, funs | { convert!(statement then | vars funs)? }),
+                otherwise: wrap_scope!(vars, funs | { convert!(statement otherwise | vars funs)? }),
             },
-        },
-        PStatement::Loop { cond, body } => AyNode {
+        }),
+        PStatement::Loop { cond, body } => Ok(AyNode {
             span: span.clone(),
             inner: Statement::Loop {
-                cond: cond.clone().map(|cond| convert_expr(&cond, vars, funs)),
-                body: wrap_scope!(vars, funs | { convert!(statement body | vars funs) }),
+                cond: cond
+                    .clone()
+                    .map(|cond| convert_expr(&cond, vars, funs))
+                    .transpose()?,
+                body: wrap_scope!(vars, funs | { convert!(statement body | vars funs)? }),
             },
-        },
-        PStatement::Expr(expr) => AyNode {
+        }),
+        PStatement::Expr(expr) => Ok(AyNode {
             span: span.clone(),
-            inner: Statement::Expr(convert_expr(expr, vars, funs)),
-        },
+            inner: Statement::Expr(convert_expr(expr, vars, funs)?),
+        }),
     }
 }
 
@@ -174,63 +178,83 @@ fn convert_expr(
     AyNode { span, inner }: &AyNode<PExpr>,
     mut vars: &mut ScopeMap<String, Rc<VarDec>>,
     mut funs: &mut ScopeMap<String, Rc<FunDec>>,
-) -> AyNode<Expr> {
+) -> Result<AyNode<Expr>, Trace> {
     match inner {
         PExpr::Ident(name) => {
             if let Some(rc) = vars.get(name) {
-                AyNode {
+                Ok(AyNode {
                     span: span.clone(),
                     inner: Expr::Var(rc.clone()),
-                }
+                })
             } else {
-                // FIXME: Error
-                todo!()
+                Err(Trace::new(
+                    Stage::Binding,
+                    Error::from_span(
+                        span.clone(),
+                        format!("Undefined variable: '{name}'{}", closest(vars, name)).as_ref(),
+                    ),
+                ))
             }
         }
         PExpr::FunCall { name, args } => match match_function(name, funs) {
-            Some((tense, fun_dec)) => AyNode {
+            Some((tense, fun_dec)) => Ok(AyNode {
                 span: span.clone(),
                 inner: Expr::FunCall {
                     tense,
                     dec: fun_dec.clone(),
                     name: name.clone(),
-                    args: convert!(expr args | vars funs),
+                    args: convert!(expr args | vars funs)?,
                 },
-            },
-            None => todo!(),
+            }),
+            None => Err(Trace::new(
+                Stage::Binding,
+                Error::from_span(
+                    span.clone(),
+                    format!("Undefined function: '{name}'{}", closest(funs, name)).as_ref(),
+                ),
+            )),
         },
-        PExpr::Number(num) => AyNode {
+        PExpr::Number(num) => Ok(AyNode {
             span: span.clone(),
             inner: Expr::Number(*num),
-        },
-        PExpr::String(string) => AyNode {
+        }),
+        PExpr::String(string) => Ok(AyNode {
             span: span.clone(),
             inner: Expr::String(string.clone()),
-        },
-        PExpr::Negated(expr) => AyNode {
+        }),
+        PExpr::Negated(expr) => Ok(AyNode {
             span: span.clone(),
-            inner: Expr::Negated(Box::new(convert_expr(expr, vars, funs))),
-        },
+            inner: Expr::Negated(Box::new(convert_expr(expr, vars, funs)?)),
+        }),
         PExpr::Comparison {
             left,
             right,
             operator,
-        } => AyNode {
+        } => Ok(AyNode {
             span: span.clone(),
             inner: Expr::Comparison {
-                left: Box::new(convert_expr(left, vars, funs)),
-                right: Box::new(convert_expr(right, vars, funs)),
+                left: Box::new(convert_expr(left, vars, funs)?),
+                right: Box::new(convert_expr(right, vars, funs)?),
                 operator: operator.clone(),
             },
-        },
-        PExpr::Array { items } => AyNode {
+        }),
+        PExpr::Array { items } => Ok(AyNode {
             span: span.clone(),
             inner: Expr::Array {
-                items: convert!(expr items | vars funs),
+                items: convert!(expr items | vars funs)?,
             },
-        },
-    };
-    todo!("{span:?}")
+        }),
+    }
+}
+
+fn closest<T>(scope_map: &ScopeMap<String, T>, name: &str) -> String {
+    scope_map
+        .keys()
+        .map(|key| (key, distance::levenshtein(name, key)))
+        .min_by(|(_, d1), (_, d2)| usize::cmp(d1, d2))
+        .filter(|(key, dist)| *dist * 2 < key.len())
+        .and_then(|(key, _)| Some(format!(". Maybe you meant: '{}'?", key.replace(".", ""))))
+        .unwrap_or("".to_owned())
 }
 
 fn match_function(name: &str, funs: &ScopeMap<String, Rc<FunDec>>) -> Option<(Tense, Rc<FunDec>)> {

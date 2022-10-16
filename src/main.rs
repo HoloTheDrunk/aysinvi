@@ -17,14 +17,22 @@ use pest::{
 };
 
 fn main() -> Result<(), Trace> {
-    let ast = parse(SourceCode::File("./examples/mod.ay".to_string()))?;
-    println!("\x1b[1mAST\x1b[0m\n{ast:?}");
+    macro_rules! print_ast {
+        ($ast:ident) => {
+            println!("\x1b[1m{}\x1b[0m", stringify!($ast));
+            if let Err(ref trace) = $ast {
+                println!("{trace}");
+            } else {
+                println!("{:?}", $ast);
+            }
+        };
+    }
 
-    let bound = binding::convert(&ast);
-    println!(
-        "\x1b[1mBOUND\x1b[0m\n{:?}",
-        bound.collect::<Vec<AyNode<binding::Statement>>>()
-    );
+    let ast = parse(SourceCode::File("./examples/funcall.ay".to_string()));
+    print_ast!(ast);
+
+    let bound = binding::convert(&ast?);
+    print_ast!(bound);
 
     Ok(())
 }
