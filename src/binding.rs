@@ -244,7 +244,7 @@ mod test {
         wrap_scope!(
             funs | {
                 funs.define(
-                    "scope".to_string(),
+                    "scope".to_owned(),
                     Rc::new(FunDec {
                         name: "scope".to_owned(),
                         ..Default::default()
@@ -254,9 +254,9 @@ mod test {
                 wrap_scope!(
                     funs | {
                         funs.define(
-                            "t.aron".to_string(),
+                            "t.aron".to_owned(),
                             Rc::new(FunDec {
-                                name: "taron".to_string(),
+                                name: "taron".to_owned(),
                                 ..Default::default()
                             }),
                         );
