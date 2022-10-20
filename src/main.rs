@@ -34,6 +34,15 @@ fn main() -> Result<(), Trace> {
     let bound = binding::convert(&ast?);
     print_ast!(bound);
 
+    println!(
+        "{}",
+        highlight_aysinvi(
+            std::fs::read_to_string("./examples/fizzbuzz.ay")
+                .unwrap()
+                .as_ref()
+        )
+    );
+
     Ok(())
 }
 
