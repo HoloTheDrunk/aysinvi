@@ -100,19 +100,6 @@ impl std::fmt::Display for Trace {
                         }
                     };
 
-                    let underline = match err.line_col() {
-                        LineColLocation::Pos((_, x)) => "^".to_owned(),
-                        LineColLocation::Span((ys, xs), (ye, xe)) => {
-                            if ys == ye && xe - xs > 1 {
-                                format!("^{}^", "-".repeat(xe - xs - 2))
-                            } else if xe - xs > 1 {
-                                format!("^{}", "-".repeat(err.line().len() - xs))
-                            } else {
-                                "^".to_owned()
-                            }
-                        }
-                    };
-
                     // ---> STAGE | COORDS
                     //    |
                     // NBR| LINE
@@ -121,11 +108,22 @@ impl std::fmt::Display for Trace {
                     format!(
                         "{arrow} {stage:?} | {coords}\n\
                          {padding}|\n\
-                         {line_nbr}| {}\n\
-                         {padding}| {underline}\n\
+                         {}\n\
+                         {padding}|\n\
                          {padding}= {}\n",
                         // Line number and line
-                        err.line(),
+                        err.line()
+                            .split('\n')
+                            .enumerate()
+                            // line.trim().is_empty()
+                            .map(|(index, line)| if !line.trim().is_empty() {
+                                format!("{}| {}", line_nbr + index, line.trim_end())
+                            } else {
+                                "".to_owned()
+                            })
+                            .filter(|line| !line.is_empty())
+                            .collect::<Vec<String>>()
+                            .join("\n"),
                         // Error
                         err.message()
                     )
