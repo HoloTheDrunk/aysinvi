@@ -16,7 +16,7 @@ use std::rc::Rc;
 #[derive(PartialEq, Eq, Default, Debug, Clone)]
 pub struct FunDec {
     name: String,
-    args: Vec<String>,
+    args: Vec<Rc<VarDec>>,
     body: Vec<AyNode<Statement>>,
 }
 
@@ -132,18 +132,22 @@ fn convert_statement(
             })
         }
         PStatement::FunDec { name, args, body } => {
+            // TODO: Implement recursion
+            // NOTE: Recursion is impossible with the current representation (requires Weak refs)
+
+            let args = args
+                .iter()
+                .map(|arg| {
+                    let rc = Rc::new(VarDec::default());
+                    vars.define(arg.clone(), rc.clone());
+                    rc
+                })
+                .collect();
+
             let fun_dec = Rc::new(FunDec {
                 name: name.clone(),
-                args: args.clone(),
-                body: wrap_scope!(
-                    vars,
-                    funs | {
-                        args.iter()
-                            .for_each(|arg| vars.define(arg.clone(), Rc::new(VarDec::default())));
-
-                        convert!(statement body | vars funs)?
-                    }
-                ),
+                args,
+                body: wrap_scope!(vars, funs | { convert!(statement body | vars funs)? }),
             });
 
             funs.define(name.clone(), fun_dec.clone());
