@@ -1,6 +1,6 @@
 use super::{span::Span, trace_error::Error};
 
-use crate::parsing::*;
+use crate::{highlight::highlight_aysinvi, parsing::*};
 
 use pest::{
     error::{Error as PestError, ErrorVariant, LineColLocation},
@@ -100,16 +100,18 @@ impl std::fmt::Display for Trace {
                         }
                     };
 
+                    let pipe = "\x1b[2;37m|\x1b[0m";
+
                     // ---> STAGE | COORDS
                     //    |
                     // NBR| LINE
                     //    |
                     //    = ERROR
                     format!(
-                        "{arrow} {stage:?} | {coords}\n\
-                         {padding}|\n\
+                        "{arrow} \x1b[33m{stage:?}\x1b[0m {pipe} \x1b[34m{coords}\x1b[0m\n\
+                         {padding}{pipe}\n\
                          {}\n\
-                         {padding}|\n\
+                         {padding}{pipe}\n\
                          {padding}= {}\n",
                         // Line number and line
                         err.line()
@@ -117,7 +119,11 @@ impl std::fmt::Display for Trace {
                             .enumerate()
                             // line.trim().is_empty()
                             .map(|(index, line)| if !line.trim().is_empty() {
-                                format!("{}| {}", line_nbr + index, line.trim_end())
+                                format!(
+                                    "\x1b[2;37m{}\x1b[0m{pipe} {}",
+                                    line_nbr + index,
+                                    highlight_aysinvi(line.trim_end())
+                                )
                             } else {
                                 "".to_owned()
                             })

@@ -2,13 +2,14 @@
 
 mod binding;
 mod error;
+mod highlight;
 mod parsing;
 
 extern crate pest;
 #[macro_use]
 extern crate pest_derive;
 
-use crate::{error::trace::Trace, parsing::*};
+use crate::{error::trace::Trace, highlight::highlight_aysinvi, parsing::*};
 
 use pest::{
     error::{Error, ErrorVariant},
