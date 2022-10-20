@@ -103,7 +103,7 @@ impl std::fmt::Display for Trace {
                     // ---> STAGE | COORDS
                     //    |
                     // NBR| LINE
-                    //    | UNDERLINE
+                    //    |
                     //    = ERROR
                     format!(
                         "{arrow} {stage:?} | {coords}\n\
