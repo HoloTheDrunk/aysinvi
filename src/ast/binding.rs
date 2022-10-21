@@ -1,6 +1,6 @@
 use crate::{
     ast::{
-        lib::{AyNode, ComparisonOperator, Multiplier, Node, convert_iter},
+        lib::{convert_iter, AyNode, ComparisonOperator, Multiplier, Node},
         parsing::{Expr as PExpr, Statement as PStatement},
     },
     error::{
@@ -155,7 +155,10 @@ fn convert_statement(
             inner: Statement::If {
                 cond: convert_expr(cond, vars, funs)?,
                 then: wrap_scope!(vars, funs | { convert_iter!(statement then | vars funs)? }),
-                otherwise: wrap_scope!(vars, funs | { convert_iter!(statement otherwise | vars funs)? }),
+                otherwise: wrap_scope!(
+                    vars,
+                    funs | { convert_iter!(statement otherwise | vars funs)? }
+                ),
             },
         }),
         PStatement::Loop { cond, body } => Ok(AyNode {

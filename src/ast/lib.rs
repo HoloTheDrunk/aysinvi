@@ -2,10 +2,7 @@ use crate::error::span::Span;
 
 use std::str::FromStr;
 
-use {
-    paste::paste,
-    strum_macros::EnumString
-};
+use {paste::paste, strum_macros::EnumString};
 
 #[derive(Debug)]
 pub enum SourceCode {
@@ -21,6 +18,18 @@ pub struct AyNode<Inner: Node> {
 }
 
 pub trait Node {}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub enum AyType {
+    #[default]
+    Number,
+    String,
+    Array(Box<AyType>),
+    Function {
+        args: Vec<AyType>,
+        result: Box<AyType>,
+    },
+}
 
 #[derive(Debug, EnumString)]
 #[repr(i64)]
