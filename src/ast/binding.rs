@@ -1,6 +1,6 @@
 use crate::{
     ast::{
-        lib::{AyNode, ComparisonOperator, Multiplier, Node},
+        lib::{AyNode, ComparisonOperator, Multiplier, Node, convert_iter},
         parsing::{Expr as PExpr, Statement as PStatement},
     },
     error::{
@@ -12,7 +12,7 @@ use crate::{
 
 use std::rc::Rc;
 
-use {paste::paste, pest::error::LineColLocation, quickscope::ScopeMap};
+use {pest::error::LineColLocation, quickscope::ScopeMap};
 
 #[derive(PartialEq, Eq, Default, Debug, Clone)]
 pub struct FunDec {
@@ -85,17 +85,6 @@ pub fn convert(mut ast: &Vec<AyNode<PStatement>>) -> Result<Vec<AyNode<Statement
         .collect::<Result<Vec<AyNode<Statement>>, Trace>>()
 }
 
-macro_rules! convert {
-    ($stex:ident $field:ident | $vars:ident $funs:ident) => {
-        paste! {
-            $field
-                .iter()
-                .map(|node| [<convert_ $stex>](node, $vars, $funs))
-                .collect::<Result<Vec<AyNode<_>>, Trace>>()
-        }
-    };
-}
-
 macro_rules! wrap_scope {
     ($($scoped_map:ident),* | $actions:block) => {
         {
@@ -119,7 +108,7 @@ fn convert_statement(
         PStatement::VarDec { names, values } => {
             let var_dec = Rc::new(VarDec {
                 names: names.clone(),
-                values: convert!(expr values | vars funs)?,
+                values: convert_iter!(expr values | vars funs)?,
             });
 
             names
@@ -147,7 +136,7 @@ fn convert_statement(
             let fun_dec = Rc::new(FunDec {
                 name: name.clone(),
                 args,
-                body: wrap_scope!(vars, funs | { convert!(statement body | vars funs)? }),
+                body: wrap_scope!(vars, funs | { convert_iter!(statement body | vars funs)? }),
             });
 
             funs.define(name.clone(), fun_dec.clone());
@@ -165,8 +154,8 @@ fn convert_statement(
             span: span.clone(),
             inner: Statement::If {
                 cond: convert_expr(cond, vars, funs)?,
-                then: wrap_scope!(vars, funs | { convert!(statement then | vars funs)? }),
-                otherwise: wrap_scope!(vars, funs | { convert!(statement otherwise | vars funs)? }),
+                then: wrap_scope!(vars, funs | { convert_iter!(statement then | vars funs)? }),
+                otherwise: wrap_scope!(vars, funs | { convert_iter!(statement otherwise | vars funs)? }),
             },
         }),
         PStatement::Loop { cond, body } => Ok(AyNode {
@@ -176,7 +165,7 @@ fn convert_statement(
                     .clone()
                     .map(|cond| convert_expr(&cond, vars, funs))
                     .transpose()?,
-                body: wrap_scope!(vars, funs | { convert!(statement body | vars funs)? }),
+                body: wrap_scope!(vars, funs | { convert_iter!(statement body | vars funs)? }),
             },
         }),
         PStatement::Expr(expr) => Ok(AyNode {
@@ -215,7 +204,7 @@ fn convert_expr(
                     tense,
                     dec: fun_dec,
                     name: name.clone(),
-                    args: convert!(expr args | vars funs)?,
+                    args: convert_iter!(expr args | vars funs)?,
                 },
             }),
             None => Err(Trace::new(
@@ -253,7 +242,7 @@ fn convert_expr(
         PExpr::Array { items } => Ok(AyNode {
             span: span.clone(),
             inner: Expr::Array {
-                items: convert!(expr items | vars funs)?,
+                items: convert_iter!(expr items | vars funs)?,
             },
         }),
     }

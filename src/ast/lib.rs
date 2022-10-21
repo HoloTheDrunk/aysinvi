@@ -2,7 +2,10 @@ use crate::error::span::Span;
 
 use std::str::FromStr;
 
-use strum_macros::EnumString;
+use {
+    paste::paste,
+    strum_macros::EnumString
+};
 
 #[derive(Debug)]
 pub enum SourceCode {
@@ -33,3 +36,25 @@ pub enum ComparisonOperator {
     #[strum(serialize = "teng")]
     Equals,
 }
+
+macro_rules! convert_iter {
+    ($stex:ident $field:ident | $($iter:ident)+) => {
+        paste::paste! {
+            $field
+                .iter()
+                .map(|node| [<convert_ $stex>](node, $($iter),+))
+                .collect::<Result<Vec<AyNode<_>>, Trace>>()
+        }
+    };
+
+    ($stex:ident $field:ident) => {
+        paste::paste! {
+            $field
+                .iter()
+                .map([<convert_ $stex>])
+                .collect::<Result<Vec<AyNode<_>>, Trace>>()
+        }
+    };
+}
+
+pub(crate) use convert_iter;
