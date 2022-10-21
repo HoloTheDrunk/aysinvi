@@ -1,15 +1,21 @@
 #![allow(unused)]
 
-mod binding;
+mod ast;
 mod error;
 mod highlight;
-mod parsing;
 
 extern crate pest;
 #[macro_use]
 extern crate pest_derive;
 
-use crate::{error::trace::Trace, highlight::highlight_aysinvi, parsing::*};
+use crate::{
+    ast::{
+        lib::{AyNode, SourceCode},
+        *,
+    },
+    error::trace::Trace,
+    highlight::highlight_aysinvi,
+};
 
 use pest::{
     error::{Error, ErrorVariant},
@@ -28,7 +34,7 @@ fn main() -> Result<(), Trace> {
         };
     }
 
-    let ast = parse(SourceCode::File("./examples/funargs.ay".to_string()));
+    let ast = parsing::parse(SourceCode::File("./examples/funargs.ay".to_string()));
     print_ast!(ast);
 
     let bound = binding::convert(&ast?);
@@ -54,7 +60,7 @@ mod test {
 
     fn run_tests<F>(path: &str, check: F)
     where
-        F: Fn(Result<Vec<AyNode<Statement>>, Trace>) -> bool,
+        F: Fn(Result<Vec<AyNode<parsing::Statement>>, Trace>) -> bool,
     {
         let folder = format!("{TEST_FOLDER}/{path}");
         let mut entries = std::fs::read_dir(folder.clone())
@@ -64,7 +70,7 @@ mod test {
             let entry = entry.path().to_str().unwrap().to_string();
             eprintln!("Running test {entry}");
 
-            let res = parse(SourceCode::File(entry));
+            let res = parsing::parse(SourceCode::File(entry));
             if let Err(trace) = &res {
                 eprintln!("{trace}");
             }

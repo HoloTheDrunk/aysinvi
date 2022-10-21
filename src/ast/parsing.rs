@@ -1,38 +1,23 @@
-use crate::error::{
-    span::Span,
-    trace::{Stage, Trace},
-    trace_error::Error,
+use crate::{
+    ast::lib::*,
+    error::{
+        span::Span,
+        trace::{Stage, Trace},
+        trace_error::Error,
+    },
 };
 
 use std::{path::Path, str::FromStr};
 
-use {
-    pest::{
-        error::{Error as PestError, ErrorVariant},
-        iterators::{Pair, Pairs},
-        Parser,
-    },
-    strum_macros::EnumString,
+use pest::{
+    error::{Error as PestError, ErrorVariant},
+    iterators::{Pair, Pairs},
+    Parser,
 };
-
-#[derive(Debug)]
-pub enum SourceCode {
-    File(String),
-    Content(String),
-}
 
 #[derive(Parser)]
 #[grammar = "../pest/grammar.pest"]
 pub struct AyParser;
-
-/// Node containing a `Span` of code and the corresponding AST
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct AyNode<Inner: Node> {
-    pub span: Span,
-    pub inner: Inner,
-}
-
-pub trait Node {}
 
 /// A statement is anything that cannot be expected to return a value.
 #[derive(PartialEq, Debug, Clone)]
@@ -80,21 +65,6 @@ pub enum Expr {
     Negated(Box<AyNode<Expr>>),
 }
 impl Node for Expr {}
-
-#[derive(Debug, EnumString)]
-#[repr(i64)]
-pub enum Multiplier {
-    #[strum(serialize = "melo")]
-    Double = 2,
-    #[strum(serialize = "pxelo")]
-    Triple = 3,
-}
-
-#[derive(Debug, EnumString, PartialEq, Eq, Clone)]
-pub enum ComparisonOperator {
-    #[strum(serialize = "teng")]
-    Equals,
-}
 
 /// Pushes new error onto stacktrace or returns pred(pair).
 fn handle<F, T: Node>(parent: &Pair<Rule>, pair: Pair<Rule>, pred: &F) -> Result<AyNode<T>, Trace>

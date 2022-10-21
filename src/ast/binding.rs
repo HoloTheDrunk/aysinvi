@@ -1,11 +1,12 @@
 use crate::{
+    ast::{
+        lib::{AyNode, ComparisonOperator, Multiplier, Node},
+        parsing::{Expr as PExpr, Statement as PStatement},
+    },
     error::{
         span::Span,
         trace::{Stage, Trace, TraceError},
         trace_error::Error,
-    },
-    parsing::{
-        AyNode, ComparisonOperator, Expr as PExpr, Multiplier, Node, Statement as PStatement,
     },
 };
 
