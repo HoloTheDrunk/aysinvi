@@ -99,11 +99,3 @@ fn split_words(text: &str) -> Vec<(ElemType, &str)> {
 
     result
 }
-
-// #[cfg(test)]
-// mod test {
-//     #[test]
-//     fn test_highlighting() {
-//
-//     }
-// }
