@@ -10,9 +10,9 @@ use crate::{
     },
 };
 
-use {paste::paste, pest::error::LineColLocation, quickscope::ScopeMap};
-
 use std::rc::Rc;
+
+use {paste::paste, pest::error::LineColLocation, quickscope::ScopeMap};
 
 #[derive(PartialEq, Eq, Default, Debug, Clone)]
 pub struct FunDec {
@@ -85,7 +85,6 @@ pub fn convert(mut ast: &Vec<AyNode<PStatement>>) -> Result<Vec<AyNode<Statement
         .collect::<Result<Vec<AyNode<Statement>>, Trace>>()
 }
 
-// This might be retarded lol
 macro_rules! convert {
     ($stex:ident $field:ident | $vars:ident $funs:ident) => {
         paste! {
