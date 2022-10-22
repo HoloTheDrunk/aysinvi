@@ -22,6 +22,7 @@ pub trait Node {}
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub enum AyType {
     #[default]
+    Bool,
     Number,
     String,
     Array(Box<AyType>),
@@ -61,7 +62,7 @@ macro_rules! convert_iter {
             $field
                 .iter()
                 .map([<convert_ $stex>])
-                .collect::<Result<Vec<AyNode<_>>, Trace>>()
+                .collect::<Result<Vec<_>, Trace>>()
         }
     };
 }

@@ -71,7 +71,10 @@ pub enum Expr {
     },
     Number(i64),
     String(String),
-    Var(Rc<VarDec>),
+    Var {
+        name: String,
+        dec: Rc<VarDec>,
+    },
     Negated(Box<AyNode<Expr>>),
 }
 impl Node for Expr {}
@@ -188,7 +191,10 @@ fn convert_expr(
             if let Some(rc) = vars.get(name) {
                 Ok(AyNode {
                     span: span.clone(),
-                    inner: Expr::Var(rc.clone()),
+                    inner: Expr::Var {
+                        name: name.clone(),
+                        dec: rc.clone(),
+                    },
                 })
             } else {
                 Err(Trace::new(
