@@ -10,14 +10,12 @@ use crate::{
     },
 };
 
-use std::rc::Rc;
-
 use {pest::error::LineColLocation, quickscope::ScopeMap};
 
 #[derive(PartialEq, Eq, Default, Debug, Clone)]
 pub struct FunDec {
     name: String,
-    args: Vec<Rc<VarDec>>,
+    args: Vec<String>,
     body: Vec<AyNode<Statement>>,
 }
 
@@ -37,8 +35,8 @@ pub struct VarDec {
 /// A statement is anything that cannot be expected to return a value.
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Statement {
-    FunDec(Rc<FunDec>),
-    VarDec(Rc<VarDec>),
+    FunDec(FunDec),
+    VarDec(VarDec),
     Expr(AyNode<Expr>),
     If {
         cond: AyNode<Expr>,
@@ -57,7 +55,6 @@ impl Node for Statement {}
 pub enum Expr {
     FunCall {
         tense: Tense,
-        dec: Rc<FunDec>,
         name: String,
         args: Vec<AyNode<Expr>>,
     },
@@ -71,17 +68,14 @@ pub enum Expr {
     },
     Number(i64),
     String(String),
-    Var {
-        name: String,
-        dec: Rc<VarDec>,
-    },
+    Var(String),
     Negated(Box<AyNode<Expr>>),
 }
 impl Node for Expr {}
 
 pub fn convert(mut ast: &Vec<AyNode<PStatement>>) -> Result<Vec<AyNode<Statement>>, Trace> {
-    let mut vars = ScopeMap::<String, Rc<VarDec>>::new();
-    let mut funs = ScopeMap::<String, Rc<FunDec>>::new();
+    let mut vars = ScopeMap::<String, ()>::new();
+    let mut funs = ScopeMap::<String, ()>::new();
 
     ast.iter()
         .map(move |node| convert_statement(node, &mut vars, &mut funs))
@@ -104,49 +98,36 @@ macro_rules! wrap_scope {
 
 fn convert_statement(
     AyNode { span, inner }: &AyNode<PStatement>,
-    mut vars: &mut ScopeMap<String, Rc<VarDec>>,
-    mut funs: &mut ScopeMap<String, Rc<FunDec>>,
+    mut vars: &mut ScopeMap<String, ()>,
+    mut funs: &mut ScopeMap<String, ()>,
 ) -> Result<AyNode<Statement>, Trace> {
     match inner {
         PStatement::VarDec { names, values } => {
-            let var_dec = Rc::new(VarDec {
-                names: names.clone(),
-                values: convert_iter!(expr values | vars funs)?,
-            });
-
-            names
-                .iter()
-                .for_each(|name| vars.define(name.clone(), var_dec.clone()));
+            names.iter().for_each(|name| vars.define(name.clone(), ()));
 
             Ok(AyNode {
                 span: span.clone(),
-                inner: Statement::VarDec(var_dec),
+                inner: Statement::VarDec(VarDec {
+                    names: names.clone(),
+                    values: convert_iter!(expr values | vars funs)?,
+                }),
             })
         }
         PStatement::FunDec { name, args, body } => {
-            // TODO: Implement recursion
-            // NOTE: Recursion is impossible with the current representation (requires Weak refs)
-
-            let args = args
-                .iter()
-                .map(|arg| {
-                    let rc = Rc::new(VarDec::default());
-                    vars.define(arg.clone(), rc.clone());
-                    rc
-                })
-                .collect();
-
-            let fun_dec = Rc::new(FunDec {
-                name: name.clone(),
-                args,
-                body: wrap_scope!(vars, funs | { convert_iter!(statement body | vars funs)? }),
-            });
-
-            funs.define(name.clone(), fun_dec.clone());
-
+            funs.define(name.clone(), ());
             Ok(AyNode {
                 span: span.clone(),
-                inner: Statement::FunDec(fun_dec),
+                inner: Statement::FunDec(FunDec {
+                    name: name.clone(),
+                    args: args.clone(),
+                    body: wrap_scope!(
+                        vars,
+                        funs | {
+                            args.iter().for_each(|var| vars.define(var.clone(), ()));
+                            convert_iter!(statement body | vars funs)?
+                        }
+                    ),
+                }),
             })
         }
         PStatement::If {
@@ -183,18 +164,15 @@ fn convert_statement(
 
 fn convert_expr(
     AyNode { span, inner }: &AyNode<PExpr>,
-    mut vars: &mut ScopeMap<String, Rc<VarDec>>,
-    mut funs: &mut ScopeMap<String, Rc<FunDec>>,
+    mut vars: &mut ScopeMap<String, ()>,
+    mut funs: &mut ScopeMap<String, ()>,
 ) -> Result<AyNode<Expr>, Trace> {
     match inner {
         PExpr::Ident(name) => {
             if let Some(rc) = vars.get(name) {
                 Ok(AyNode {
                     span: span.clone(),
-                    inner: Expr::Var {
-                        name: name.clone(),
-                        dec: rc.clone(),
-                    },
+                    inner: Expr::Var(name.clone()),
                 })
             } else {
                 Err(Trace::new(
@@ -207,11 +185,10 @@ fn convert_expr(
             }
         }
         PExpr::FunCall { name, args } => match match_function(name, funs) {
-            Some((tense, fun_dec)) => Ok(AyNode {
+            Some(tense) => Ok(AyNode {
                 span: span.clone(),
                 inner: Expr::FunCall {
                     tense,
-                    dec: fun_dec,
                     name: name.clone(),
                     args: convert_iter!(expr args | vars funs)?,
                 },
@@ -267,22 +244,22 @@ fn closest<T>(scope_map: &ScopeMap<String, T>, name: &str) -> String {
         .unwrap_or_else(|| "".to_owned())
 }
 
-fn match_function(name: &str, funs: &ScopeMap<String, Rc<FunDec>>) -> Option<(Tense, Rc<FunDec>)> {
+fn match_function(name: &str, funs: &ScopeMap<String, ()>) -> Option<Tense> {
     funs.iter().find_map(|(key, fun)| {
         if key.contains('.') {
             let (left, right) = key.split_once('.').unwrap();
 
             if format!("{left}{right}") == name {
-                Some((Tense::Present, fun.clone()))
+                Some(Tense::Present)
             } else if format!("{left}ìy{right}") == name {
-                Some((Tense::Imminent, fun.clone()))
+                Some(Tense::Imminent)
             } else if format!("{left}ay{right}") == name {
-                Some((Tense::Future, fun.clone()))
+                Some(Tense::Future)
             } else {
                 None
             }
         } else {
-            (key == name).then(|| (Tense::Present, fun.clone()))
+            (key == name).then(|| Tense::Present)
         }
     })
 }
@@ -303,27 +280,15 @@ mod test {
     /// taron() -- invalid
     /// ````
     fn test_match_function() {
-        let mut funs = ScopeMap::<String, Rc<FunDec>>::new();
+        let mut funs = ScopeMap::<String, ()>::new();
 
         wrap_scope!(
             funs | {
-                funs.define(
-                    "scope".to_owned(),
-                    Rc::new(FunDec {
-                        name: "scope".to_owned(),
-                        ..Default::default()
-                    }),
-                );
+                funs.define("scope".to_owned(), ());
 
                 wrap_scope!(
                     funs | {
-                        funs.define(
-                            "t.aron".to_owned(),
-                            Rc::new(FunDec {
-                                name: "taron".to_owned(),
-                                ..Default::default()
-                            }),
-                        );
+                        funs.define("t.aron".to_owned(), ());
 
                         vec!["taron", "tìyaron", "tayaron"]
                             .iter()
