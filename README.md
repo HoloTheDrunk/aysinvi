@@ -77,10 +77,10 @@ Some of the main goals of this project are:
  - [x] Variables
    - [x] Definition
    - [x] Use
- - [ ] Functions 
+ - [x] Functions 
    - [x] Definition
    - [x] Call
-   - [ ] Recursion
+   - [x] Recursion
 
 ### [Typed AST](#progress)
  - [ ] Definitions
