@@ -53,7 +53,16 @@ macro_rules! convert_iter {
             $field
                 .iter()
                 .map(|node| [<convert_ $stex>](node, $($iter),+))
-                .collect::<Result<Vec<AyNode<_>>, Trace>>()
+                .collect::<Result<Vec<_>, Trace>>()
+        }
+    };
+
+    ($stex:ident $field:ident | &mut $($iter:ident)+) => {
+        paste::paste! {
+            $field
+                .iter()
+                .map(|node| [<convert_ $stex>](node, &mut $($iter),+))
+                .collect::<Result<Vec<_>, Trace>>()
         }
     };
 
@@ -68,3 +77,19 @@ macro_rules! convert_iter {
 }
 
 pub(crate) use convert_iter;
+
+macro_rules! wrap_scope {
+    ($($scoped_map:ident),* | $actions:block) => {
+        {
+            $( $scoped_map.push_layer(); )*
+
+            let res = $actions;
+
+            $( $scoped_map.pop_layer(); )*
+
+            res
+        }
+    };
+}
+
+pub(crate) use wrap_scope;

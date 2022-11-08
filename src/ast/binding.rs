@@ -1,6 +1,6 @@
 use crate::{
     ast::{
-        lib::{convert_iter, AyNode, ComparisonOperator, Multiplier, Node},
+        lib::{convert_iter, wrap_scope, AyNode, ComparisonOperator, Multiplier, Node},
         parsing::{Expr as PExpr, Statement as PStatement},
     },
     error::{
@@ -80,20 +80,6 @@ pub fn convert(mut ast: &Vec<AyNode<PStatement>>) -> Result<Vec<AyNode<Statement
     ast.iter()
         .map(move |node| convert_statement(node, &mut vars, &mut funs))
         .collect::<Result<Vec<AyNode<Statement>>, Trace>>()
-}
-
-macro_rules! wrap_scope {
-    ($($scoped_map:ident),* | $actions:block) => {
-        {
-            $( $scoped_map.push_layer(); )*
-
-            let res = $actions;
-
-            $( $scoped_map.pop_layer(); )*
-
-            res
-        }
-    };
 }
 
 fn convert_statement(
